@@ -17,6 +17,7 @@ import { fmtChars, fmtDateStr, fmtHours, fmtMins } from "../lib/format.js";
 import { WorkMetaForm, setCurrentWork } from "../panels/work-form.js";
 import { WorkTriage } from "../panels/work-triage.js";
 import { AddPaperBook, PaperLog } from "../panels/paper.js";
+import { toggle as openWordPopup, close as closeWordPopup } from "../lib/word-popup.js";
 import { Modal } from "../components/modal.js";
 
 const SITTINGS_SHOWN = 20;
@@ -110,9 +111,24 @@ export function WorkDetail({ work, works, settings, onBack, onSaved }) {
 
   const meta = detail.meta;
   const done = meta?.status === "finished";
-  const total = meta?.total_chars;
-  const pct = total ? Math.min(100, (detail.chars / total) * 100) : null;
   const speed = detail.speed;
+  // A book with an epub knows its own length and where the bookmark is, so it
+  // gets the same header line as a VN reading against `total_chars`. The
+  // bookmark wins over the logged character count: a paper sitting is logged
+  // in pages, and the position is what the reader actually moved.
+  const paperTotal = paper?.body_chars || null;
+  const paperRead = paperTotal
+    ? paperTotal * Math.max(0, Math.min(1, paper.progress ?? 0))
+    : null;
+  const total = paperTotal ?? meta?.total_chars ?? null;
+  const read = paperRead ?? detail.chars;
+  const pct = total ? Math.min(100, (read / total) * 100) : null;
+  const remainingSecs =
+    paperRead !== null
+      ? speed > 0
+        ? ((total - paperRead) / speed) * 3600
+        : null
+      : (detail.remaining_secs ?? null);
   // Built whole: htm collapses whitespace where a literal meets an
   // interpolation across a line break.
   const readBetween = [
@@ -123,11 +139,11 @@ export function WorkDetail({ work, works, settings, onBack, onSaved }) {
     .join(" – ");
   const progressLabel =
     pct !== null
-      ? `${fmtChars(detail.chars)} / ${fmtChars(total)} · ${pct.toFixed(0)}%`
+      ? `${fmtChars(Math.round(read))} / ${fmtChars(total)} · ${pct.toFixed(0)}%`
       : null;
   const leftLabel =
-    detail.remaining_secs !== null && detail.remaining_secs !== undefined
-      ? `${fmtHours(detail.remaining_secs)} left at this work's ${fmtChars(Math.round(speed))}/h`
+    remainingSecs !== null
+      ? `${fmtHours(remainingSecs)} left at this work's ${fmtChars(Math.round(speed))}/h`
       : null;
 
   if (triaging) {
@@ -269,6 +285,7 @@ export function WorkDetail({ work, works, settings, onBack, onSaved }) {
       script=${detail.script}
       onTriage=${() => setTriaging(true)}
     />
+    <${UpcomingCard} work=${work} book=${paper} />
     <${SittingsCard} sittings=${detail.sittings} />
   `;
 }
@@ -314,11 +331,160 @@ function PaperCard({ work, book, canTrack, onChanged }) {
         <h2>Bookmark</h2>
         <div class="card-controls">${(pct * 100).toFixed(1)}%</div>
       </div>
-      <${ProgressBar} pct=${pct * 100} label=${`Progress through ${work}`} />
       <div class="progress-caption"><span>${page}</span></div>
       <${PaperLog} book=${book} onLogged=${onChanged} />
     </div>
   `;
+}
+
+/** The words the book is about to use that have never been judged known.
+ *
+ * Read only: the scan does not move the bookmark, record a lookup or count an
+ * encounter, so a word previewed here is still met for the first time when the
+ * sitting it was read in is logged. Only a press on the popup's ✓ or ✗ writes
+ * anything.
+ *
+ * Closed until asked for, because the scan is a real tokenizer pass over the
+ * pages ahead and most visits to a work's page do not want one. `next` carries
+ * the scan forward, so "more" continues from where the last batch stopped
+ * rather than re-reading the same pages with a bigger limit.
+ */
+function UpcomingCard({ work, book }) {
+  const [terms, setTerms] = useState(null);
+  const [next, setNext] = useState(null);
+  const [done, setDone] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    setTerms(null);
+    setNext(null);
+    setDone(false);
+    setError(null);
+    closeWordPopup();
+  }, [work]);
+
+  if (!book) return null;
+
+  async function load(from) {
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await api("/api/books/upcoming", {
+        method: "POST",
+        body: { work, from },
+      });
+      setTerms((prev) => [...(from === null ? [] : (prev ?? [])), ...r.terms]);
+      setNext(r.next);
+      setDone(r.done);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const cpp = book.chars_per_page;
+  // How far the batch reached, in the unit the book is read in.
+  const scanned =
+    terms && next !== null && cpp
+      ? `${Math.max(1, Math.round((next - book.position) / cpp))} pages ahead`
+      : null;
+
+  return html`
+    <div class="card">
+      <div class="card-head">
+        <h2>Upcoming words</h2>
+        <div class="card-controls">${scanned}</div>
+      </div>
+      ${
+        terms === null
+          ? html`<div class="actions">
+              <button class="ghost" disabled=${busy} onClick=${() => load(null)}>
+                ${busy ? "reading ahead…" : "show upcoming words"}
+              </button>
+            </div>`
+          : html`
+              <div class="upcoming">
+                ${terms.map(
+                  (t, i) => html`<${UpcomingRow} key=${`${t.headword} ${t.reading} ${i}`} term=${t} />`,
+                )}
+              </div>
+              ${!terms.length && html`<p class="chart-empty">Nothing unjudged in the pages ahead.</p>`}
+              <div class="actions">
+                <button
+                  class="ghost"
+                  disabled=${busy || done}
+                  onClick=${() => load(next)}
+                >
+                  ${done ? "end of the book" : busy ? "reading ahead…" : "more"}
+                </button>
+              </div>
+            `
+      }
+      ${error && html`<p class="chart-empty">${error}</p>`}
+    </div>
+  `;
+}
+
+/** One word, in the sentence it is first used in. */
+function UpcomingRow({ term }) {
+  const rank = term.freq_rank ?? term.bccwj_rank;
+  return html`
+    <div class="upcoming-row">
+      <div class="upcoming-word">
+        <span class="upcoming-head">${term.headword}</span>
+        ${term.reading && term.reading !== term.headword
+          ? html`<span class="upcoming-reading">${term.reading}</span>`
+          : null}
+        ${rank ? html`<span class="upcoming-rank">${rank.toLocaleString("en")}</span>` : null}
+      </div>
+      <${UpcomingSentence} sentence=${term.sentence} start=${term.start} />
+    </div>
+  `;
+}
+
+/** The sentence painted the way the reader paints it — the same statuses off
+ *  the same pipeline — with the word this row is about marked as the target.
+ *
+ *  Token offsets are UTF-16 code units, which is what a JavaScript string is
+ *  indexed in, so they slice the text directly. */
+function UpcomingSentence({ sentence, start }) {
+  const text = sentence.text;
+  const tokens = [...(sentence.tokens ?? [])].sort((a, b) => a.start - b.start);
+  const parts = [];
+  let at = 0;
+  for (const t of tokens) {
+    if (t.start < at || t.start + t.len > text.length) continue;
+    if (t.start > at) parts.push(text.slice(at, t.start));
+    const cls = ["w", t.status, t.start === start ? "target" : ""]
+      .filter(Boolean)
+      .join(" ");
+    parts.push(html`
+      <span
+        class=${cls}
+        onClick=${(e) => {
+          e.stopPropagation();
+          openWordPopup(
+            e.currentTarget,
+            {
+              term: t.headword,
+              key: t.headword,
+              reading: t.reading ?? "",
+              surface: text.slice(t.start, t.start + t.len),
+              status: t.status,
+              start: t.start,
+            },
+            text,
+          );
+        }}
+        >${text.slice(t.start, t.start + t.len)}</span
+      >
+    `);
+    at = t.start + t.len;
+  }
+  if (at < text.length) parts.push(text.slice(at));
+  return html`<p class="upcoming-sentence">${parts}</p>`;
 }
 
 /** The work's vocabulary, twice over: what has been met in it, and what its

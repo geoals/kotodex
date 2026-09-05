@@ -262,6 +262,104 @@ fn chunks(text: &str, max: usize) -> Vec<&str> {
     out
 }
 
+/// How far ahead of the bookmark one request will scan. A stretch whose words
+/// are all known yields nothing, so the scan needs an end of its own; `next`
+/// is what carries the reader past it.
+const UPCOMING_SCAN_BYTES: usize = 60_000;
+const UPCOMING_DEFAULT: usize = 25;
+const UPCOMING_MAX: usize = 100;
+
+#[derive(Deserialize)]
+pub struct UpcomingBody {
+    pub work: String,
+    /// Where to scan from. Absent means the bookmark; a past response's `next`
+    /// is what asks for the words after the ones already listed.
+    pub from: Option<i64>,
+    pub limit: Option<usize>,
+}
+
+/// The words ahead of the bookmark that have not been judged, in the order the
+/// book will meet them.
+///
+/// Read only, on purpose: this is looking at what is coming, not reading it.
+/// Nothing is encountered, nothing is looked up, and the bookmark does not
+/// move — ingest still meets these words for the first time when the sitting
+/// they were read in is logged.
+///
+/// One sentence at a time rather than one long span, because the sentence is
+/// what makes the word learnable and it has to be the sentence the word was
+/// actually found in. The scan stops at the first of `limit` words or
+/// [`UPCOMING_SCAN_BYTES`], so a request costs a bounded number of tokenizer
+/// passes however much of the book is already known.
+pub async fn upcoming_words(
+    State(state): State<AppState>,
+    Json(req): Json<UpcomingBody>,
+) -> Result<Json<Value>, AppError> {
+    let book = db::fetch_book(&state.knowledge, &req.work)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    let text = db::fetch_book_text(&state.knowledge, &req.work)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    let from = req.from.unwrap_or(book.position).max(book.position) as usize;
+    if from > text.len() || !text.is_char_boundary(from) {
+        return Err(AppError::BadRequest("not a position in this book".into()));
+    }
+    let limit = req.limit.unwrap_or(UPCOMING_DEFAULT).clamp(1, UPCOMING_MAX);
+    let Some(h) = highlight::shared(&state).await else {
+        return Err(AppError::Upstream(
+            "the tokenizer is unavailable — check the Sudachi dictionary".into(),
+        ));
+    };
+
+    let mut terms = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    let mut next = from;
+    for (offset, sentence) in books::sentences_from(&text, from) {
+        if terms.len() >= limit || offset - from >= UPCOMING_SCAN_BYTES {
+            break;
+        }
+        next = offset + sentence.len();
+        let spans = highlight::spans(&state.knowledge, &h, sentence).await;
+        // Every span of the sentence travels, not only the ones being offered:
+        // the list paints the sentence the way the reader does, and a word
+        // already known is part of how it reads.
+        let painted = serde_json::to_value(&spans).unwrap_or(Value::Null);
+        for span in spans
+            .iter()
+            .filter(|s| UPCOMING_STATUSES.contains(&s.status))
+        {
+            if !seen.insert((span.headword.clone(), span.reading.clone())) {
+                continue;
+            }
+            terms.push(json!({
+                "headword": span.headword,
+                "reading": span.reading,
+                "status": span.status,
+                "freq_rank": span.freq_rank,
+                "bccwj_rank": span.bccwj_rank,
+                "offset": offset,
+                "start": span.start,
+                "sentence": { "text": sentence, "tokens": painted.clone() },
+            }));
+            if terms.len() >= limit {
+                break;
+            }
+        }
+    }
+
+    Ok(Json(json!({
+        "terms": terms,
+        "next": next,
+        "done": next >= text.len(),
+    })))
+}
+
+/// What is worth previewing: never judged, or judged and not known. `seen` is
+/// left out — a word met before and never asked about is most of any page, and
+/// a list of those is the page.
+const UPCOMING_STATUSES: [&str; 2] = ["new", "unknown"];
+
 #[derive(Deserialize)]
 pub struct SkipBody {
     pub work: String,

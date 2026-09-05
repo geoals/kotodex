@@ -68,11 +68,13 @@ Line 2 is machine-read. Every tag is separated by \" · \". A baseline formality
 is always present, even when a mark is more informative. FAMILIARITY is not: \
 most lines start with the baseline.\n\n\
 MEANING/USAGE: nuance-carrying English. A bare one/two-word translation ONLY for \
-a concrete 1-to-1 term (焼却炉 → incinerator); otherwise a short phrase that \
-carries the actual nuance. Optionally one short usage note — a fixed collocation, \
-a polarity restriction, or the typical speaker — where citing the Japanese word \
-or its usual phrase is fine. Any Japanese reading you cite: hiragana, never \
-romaji.\n\n\
+a 1-to-1 term (焼却炉 → incinerator); otherwise a short phrase that carries the \
+actual nuance. The meaning is of the TARGET SPAN ALONE: never fold in meaning \
+contributed by the words around it. If the target normally appears inside a \
+fixed phrase, gloss the target itself and put the phrase in the usage note. \
+Optionally one short usage note — a fixed collocation, a polarity restriction, \
+or the typical speaker — where citing the Japanese word or its usual phrase is \
+fine. Any Japanese reading you cite: hiragana, never romaji.\n\n\
 {FAMILIARITY_RUBRIC}\n\n\
 {FLAVOR_RUBRIC}\n\n\
 STRUCTURAL (optional trailing parenthetical, orthogonal): (idiom) (mimetic) \

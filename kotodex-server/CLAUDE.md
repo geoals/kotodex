@@ -96,6 +96,14 @@ Measurement:
   session** (`/api/books/skip`). Those pages were read before there was
   anything to record them with; logging them would credit a day that never
   happened and push the whole span through the ledger as freshly met.
+- **Looking ahead of the bookmark writes nothing** (`/api/books/upcoming`).
+  The unjudged words of the pages ahead, in the order the book uses them, each
+  in the sentence it is first used in. It is not reading: no encounter, no
+  lookup, and the bookmark stays where it is, so ingest still meets those words
+  for the first time when the sitting is logged. Only the popup's judge buttons
+  write. The scan stops at the first of the asked-for word count or 60 kB, and
+  `next` is what the list continues from — a stretch that is all known yields
+  nothing and still has to end somewhere.
 - **Chars per page comes from the pages the body runs between**, not from the
   book's total page count — a total counts the blanks, the TOC and the
   afterword, so every page estimate would read high.

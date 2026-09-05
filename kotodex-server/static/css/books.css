@@ -155,3 +155,66 @@
   color: var(--text-secondary);
   max-width: 62ch;
 }
+
+/* Upcoming words — the unjudged vocabulary of the pages ahead, each in the
+ * sentence it is first used in.
+ *
+ * The sentence is what makes the word learnable, so it gets prose type and
+ * prose line height like the found text above. Every word in it is tappable
+ * and painted by ledger status, the same three colours the reader uses; the
+ * word the row is about is boxed rather than recoloured, so the status it is
+ * being shown for stays readable. */
+.upcoming {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+.upcoming-row {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.upcoming-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.upcoming-word {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.upcoming-head {
+  font-size: 20px;
+  font-weight: 600;
+}
+.upcoming-reading,
+.upcoming-rank {
+  font-size: 12px;
+  color: var(--muted);
+}
+.upcoming-sentence {
+  margin: 6px 0 0;
+  font-size: 16px;
+  line-height: 1.9;
+}
+.upcoming-sentence .w {
+  cursor: pointer;
+  border-radius: 3px;
+}
+.upcoming-sentence .w.new {
+  background: var(--vocab-new);
+}
+.upcoming-sentence .w.seen {
+  background: var(--vocab-seen);
+}
+.upcoming-sentence .w.unknown {
+  background: var(--vocab-unknown);
+}
+.upcoming-sentence .w.target {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.upcoming-sentence .w.open {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 1px;
+}

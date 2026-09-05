@@ -124,6 +124,54 @@ fn tail(s: &str, chars: usize) -> String {
     s.chars().skip(count.saturating_sub(chars)).collect()
 }
 
+/// Sentences from `from` on, each with the byte offset it starts at.
+///
+/// [`jp_core::text::sentences`] splits the same way but hands back owned,
+/// trimmed strings, and the offsets are the point here: what a sentence is
+/// worth showing is decided later, and the position it was found at has to
+/// survive that. Newlines end a sentence — an epub's paragraph break is a
+/// boundary whether or not the line was punctuated.
+pub fn sentences_from(text: &str, from: usize) -> impl Iterator<Item = (usize, &str)> {
+    const DELIMITERS: &[char] = &[
+        '\u{3002}', '\u{FF01}', '\u{FF1F}', '!', '?', '\u{2026}', '\u{2025}',
+    ];
+    const TRAILERS: &[char] = &['\u{300D}', '\u{300F}', '\u{FF09}', ')', '"', '\u{201D}'];
+
+    let mut cursor = from;
+    std::iter::from_fn(move || {
+        while cursor < text.len() {
+            let rest = &text[cursor..];
+            let mut end = rest.len();
+            let mut chars = rest.char_indices().peekable();
+            while let Some((i, c)) = chars.next() {
+                if c == '\n' || c == '\r' {
+                    end = i + c.len_utf8();
+                    break;
+                }
+                if DELIMITERS.contains(&c) {
+                    end = i + c.len_utf8();
+                    while let Some(&(j, next)) = chars.peek() {
+                        if !DELIMITERS.contains(&next) && !TRAILERS.contains(&next) {
+                            break;
+                        }
+                        end = j + next.len_utf8();
+                        chars.next();
+                    }
+                    break;
+                }
+            }
+            let piece = &rest[..end];
+            let start = cursor + (piece.len() - piece.trim_start().len());
+            cursor += end;
+            let trimmed = piece.trim();
+            if !trimmed.is_empty() {
+                return Some((start, trimmed));
+            }
+        }
+        None
+    })
+}
+
 /// Characters per printed page, from the page numbers the body text runs
 /// between. `None` until both are known.
 pub fn chars_per_page(
@@ -181,6 +229,23 @@ mod tests {
         let f = find(TEXT, 0, "それきり").unwrap();
         assert!(f.before.ends_with("少女は言った。"));
         assert_eq!(f.after, "黙った。");
+    }
+
+    #[test]
+    fn sentences_come_back_with_the_offsets_they_were_found_at() {
+        let got: Vec<_> = sentences_from(TEXT, 0).collect();
+        for (at, sentence) in &got {
+            assert_eq!(&TEXT[*at..*at + sentence.len()], *sentence);
+        }
+        assert!(got.iter().any(|(_, s)| s.ends_with('\u{300D}')));
+    }
+
+    #[test]
+    fn a_sentence_iterator_starts_where_it_is_told() {
+        let from = TEXT.find("それきり").unwrap();
+        let (at, first) = sentences_from(TEXT, from).next().unwrap();
+        assert_eq!(at, from);
+        assert!(first.starts_with("それきり"));
     }
 
     #[test]

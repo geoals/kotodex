@@ -135,6 +135,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/books/preview", post(books::preview_book))
         .route("/api/books/log", post(books::log_book))
         .route("/api/books/skip", post(books::skip_book))
+        .route("/api/books/upcoming", post(books::upcoming_words))
         .route("/api/works", get(works::works).post(works::upsert_work))
         .route("/api/works/detail", get(works::work_detail))
         // VNDB by title, so adding a work is not a trip to a website for an id.
