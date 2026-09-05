@@ -107,8 +107,17 @@ async fn demo_guard(
     next.run(request).await
 }
 
-async fn spa_shell() -> Html<&'static str> {
-    Html(SPA_HTML)
+/// The shell, told not to be cached.
+///
+/// It carries the stylesheet and module links, so a browser holding yesterday's
+/// copy loads today's JavaScript against yesterday's `<head>` — which shows up
+/// as one thing on the page being unstyled rather than as anything that looks
+/// like a stale cache.
+async fn spa_shell() -> impl axum::response::IntoResponse {
+    (
+        [(axum::http::header::CACHE_CONTROL, "no-cache")],
+        Html(SPA_HTML),
+    )
 }
 
 pub fn build_router(state: AppState) -> Router {

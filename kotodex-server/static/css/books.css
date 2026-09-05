@@ -218,3 +218,22 @@
   outline: 2px solid var(--text-primary);
   outline-offset: 1px;
 }
+.upcoming-known {
+  margin-left: auto;
+  padding: 2px 8px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--page);
+  color: var(--muted);
+  cursor: pointer;
+}
+.upcoming-known:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+/* A judged row stays, dimmed: the sentence is still worth reading, and a word
+   marked by mistake has to be reachable to be taken back. */
+.upcoming-row.known {
+  opacity: 0.5;
+}

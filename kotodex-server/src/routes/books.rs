@@ -351,6 +351,9 @@ pub async fn upcoming_words(
     Ok(Json(json!({
         "terms": terms,
         "next": next,
+        // Characters, not the byte span: how far ahead the scan reached is
+        // shown in pages, and a page is a number of characters.
+        "chars": jp_core::text::chars::count_chars(&text[book.position as usize..next]),
         "done": next >= text.len(),
     })))
 }

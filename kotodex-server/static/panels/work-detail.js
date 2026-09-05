@@ -352,15 +352,22 @@ function PaperCard({ work, book, canTrack, onChanged }) {
 function UpcomingCard({ work, book }) {
   const [terms, setTerms] = useState(null);
   const [next, setNext] = useState(null);
+  const [chars, setChars] = useState(0);
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  // The words judged known from this list, by ledger key. Kept rather than
+  // dropping the row: the sentence is still worth reading, and a word marked
+  // by mistake has to be reachable to be taken back.
+  const [judged, setJudged] = useState(() => new Set());
 
   useEffect(() => {
     setTerms(null);
     setNext(null);
+    setChars(0);
     setDone(false);
     setError(null);
+    setJudged(new Set());
     closeWordPopup();
   }, [work]);
 
@@ -376,6 +383,7 @@ function UpcomingCard({ work, book }) {
       });
       setTerms((prev) => [...(from === null ? [] : (prev ?? [])), ...r.terms]);
       setNext(r.next);
+      setChars(r.chars);
       setDone(r.done);
     } catch (e) {
       setError(e.message);
@@ -385,17 +393,47 @@ function UpcomingCard({ work, book }) {
   }
 
   const cpp = book.chars_per_page;
-  // How far the batch reached, in the unit the book is read in.
-  const scanned =
-    terms && next !== null && cpp
-      ? `${Math.max(1, Math.round((next - book.position) / cpp))} pages ahead`
-      : null;
+  const key = (t) => `${t.headword}\u0000${t.reading}`;
+  const left = terms ? terms.filter((t) => !judged.has(key(t))).length : 0;
+  // What the list holds and how far ahead it had to read for it. Pages from
+  // the character count the scan reports, never from the byte span — a
+  // Japanese character is three bytes and the figure would read triple.
+  const head = terms
+    ? [
+        `${left} ${left === 1 ? "word" : "words"}`,
+        cpp ? `${Math.max(1, Math.round(chars / cpp))} pages ahead` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : null;
+
+  async function markKnown(term) {
+    const k = key(term);
+    setJudged((prev) => new Set(prev).add(k));
+    try {
+      await api("/api/vocab/judge", {
+        method: "POST",
+        body: {
+          judgements: [
+            { headword: term.headword, reading: term.reading, status: "known" },
+          ],
+        },
+      });
+    } catch (e) {
+      setJudged((prev) => {
+        const out = new Set(prev);
+        out.delete(k);
+        return out;
+      });
+      setError(e.message);
+    }
+  }
 
   return html`
     <div class="card">
       <div class="card-head">
         <h2>Upcoming words</h2>
-        <div class="card-controls">${scanned}</div>
+        <div class="card-controls">${head}</div>
       </div>
       ${
         terms === null
@@ -407,7 +445,12 @@ function UpcomingCard({ work, book }) {
           : html`
               <div class="upcoming">
                 ${terms.map(
-                  (t, i) => html`<${UpcomingRow} key=${`${t.headword} ${t.reading} ${i}`} term=${t} />`,
+                  (t, i) => html`<${UpcomingRow}
+                    key=${`${t.headword} ${t.reading} ${i}`}
+                    term=${t}
+                    known=${judged.has(key(t))}
+                    onKnown=${() => markKnown(t)}
+                  />`,
                 )}
               </div>
               ${!terms.length && html`<p class="chart-empty">Nothing unjudged in the pages ahead.</p>`}
@@ -427,17 +470,21 @@ function UpcomingCard({ work, book }) {
   `;
 }
 
-/** One word, in the sentence it is first used in. */
-function UpcomingRow({ term }) {
+/** One word, in the sentence it is first used in.
+ *
+ * The reading is not written beside the headword: it is the first thing the
+ * popup says, and printing it here answers the word before it has been read.
+ */
+function UpcomingRow({ term, known, onKnown }) {
   const rank = term.freq_rank ?? term.bccwj_rank;
   return html`
-    <div class="upcoming-row">
+    <div class=${known ? "upcoming-row known" : "upcoming-row"}>
       <div class="upcoming-word">
         <span class="upcoming-head">${term.headword}</span>
-        ${term.reading && term.reading !== term.headword
-          ? html`<span class="upcoming-reading">${term.reading}</span>`
-          : null}
         ${rank ? html`<span class="upcoming-rank">${rank.toLocaleString("en")}</span>` : null}
+        <button class="upcoming-known" disabled=${known} onClick=${onKnown}>
+          ${known ? "known" : "mark known"}
+        </button>
       </div>
       <${UpcomingSentence} sentence=${term.sentence} start=${term.start} />
     </div>
