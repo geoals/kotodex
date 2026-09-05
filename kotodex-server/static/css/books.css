@@ -237,3 +237,17 @@
 .upcoming-row.known {
   opacity: 0.5;
 }
+
+/* On a phone the popup is the whole screen wide, less a margin.
+ *
+ * The shared stylesheet sizes it as a fraction of the viewport, which is right
+ * beside a video or over a game and far too narrow on a phone held upright —
+ * a definition three words to the line. Width is placement, so it belongs to
+ * the host: `lib/word-popup.js` clamps `left` to the same 8px margin, so the
+ * two agree. */
+@media (max-width: 600px) {
+  #word-popup.jp-popup {
+    width: calc(100vw - 16px);
+    max-height: 60vh;
+  }
+}
