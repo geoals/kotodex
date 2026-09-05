@@ -432,7 +432,7 @@ function UpcomingCard({ work, book }) {
   return html`
     <div class="card">
       <div class="card-head">
-        <h2>Upcoming words</h2>
+        <h2>Preview upcoming unknown words</h2>
         <div class="card-controls">${head}</div>
       </div>
       ${
