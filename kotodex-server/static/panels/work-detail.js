@@ -17,7 +17,11 @@ import { fmtChars, fmtDateStr, fmtHours, fmtMins } from "../lib/format.js";
 import { WorkMetaForm, setCurrentWork } from "../panels/work-form.js";
 import { WorkTriage } from "../panels/work-triage.js";
 import { AddPaperBook, PaperLog } from "../panels/paper.js";
-import { toggle as openWordPopup, close as closeWordPopup } from "../lib/word-popup.js";
+import {
+  toggle as openWordPopup,
+  close as closeWordPopup,
+  preload as preloadWordPopup,
+} from "../lib/word-popup.js";
 import { Modal } from "../components/modal.js";
 
 const SITTINGS_SHOWN = 20;
@@ -382,6 +386,13 @@ function UpcomingCard({ work, book }) {
         body: { work, from },
       });
       setTerms((prev) => [...(from === null ? [] : (prev ?? [])), ...r.terms]);
+      // Warmed as the batch lands, so a word tapped in the list draws its
+      // definition with no wait.
+      for (const t of r.terms)
+        preloadWordPopup(
+          { term: t.headword, reading: t.reading ?? "", start: t.start },
+          t.sentence?.text ?? "",
+        );
       setNext(r.next);
       setChars(r.chars);
       setDone(r.done);
@@ -454,13 +465,13 @@ function UpcomingCard({ work, book }) {
                 )}
               </div>
               ${!terms.length && html`<p class="chart-empty">Nothing unjudged in the pages ahead.</p>`}
-              <div class="actions">
+              <div class="upcoming-more">
                 <button
                   class="ghost"
                   disabled=${busy || done}
                   onClick=${() => load(next)}
                 >
-                  ${done ? "end of the book" : busy ? "reading ahead…" : "more"}
+                  ${done ? "end of the book" : busy ? "reading ahead…" : "load 25 more words"}
                 </button>
               </div>
             `
@@ -470,23 +481,47 @@ function UpcomingCard({ work, book }) {
   `;
 }
 
-/** One word, in the sentence it is first used in.
+/** One word, with the sentence it is first used in behind a button.
  *
  * The reading is not written beside the headword: it is the first thing the
  * popup says, and printing it here answers the word before it has been read.
+ * The headword itself opens the popup, so the common case — what does this
+ * mean — takes one tap and no sentence.
  */
 function UpcomingRow({ term, known, onKnown }) {
-  const rank = term.freq_rank ?? term.bccwj_rank;
+  const [open, setOpen] = useState(false);
+  const text = term.sentence?.text ?? "";
   return html`
     <div class=${known ? "upcoming-row known" : "upcoming-row"}>
       <div class="upcoming-word">
-        <span class="upcoming-head">${term.headword}</span>
-        ${rank ? html`<span class="upcoming-rank">${rank.toLocaleString("en")}</span>` : null}
+        <span
+          class="upcoming-head"
+          onClick=${(e) => {
+            e.stopPropagation();
+            openWordPopup(
+              e.currentTarget,
+              {
+                term: term.headword,
+                key: term.headword,
+                reading: term.reading ?? "",
+                surface: term.headword,
+                status: "new",
+                start: term.start,
+              },
+              text,
+            );
+          }}
+          >${term.headword}</span
+        >
+        <button class="upcoming-expand" onClick=${() => setOpen(!open)}>
+          ${open ? "hide sentence" : "show sentence"}
+        </button>
         <button class="upcoming-known" disabled=${known} onClick=${onKnown}>
           ${known ? "known" : "mark known"}
         </button>
       </div>
-      <${UpcomingSentence} sentence=${term.sentence} start=${term.start} />
+      ${open &&
+      html`<${UpcomingSentence} sentence=${term.sentence} start=${term.start} />`}
     </div>
   `;
 }

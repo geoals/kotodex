@@ -186,11 +186,31 @@
 .upcoming-head {
   font-size: 20px;
   font-weight: 600;
+  cursor: pointer;
 }
-.upcoming-reading,
-.upcoming-rank {
+.upcoming-reading {
   font-size: 12px;
   color: var(--muted);
+}
+.upcoming-head.open {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+.upcoming-expand {
+  margin-left: auto;
+  padding: 2px 8px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--page);
+  color: var(--muted);
+  cursor: pointer;
+}
+.upcoming-more {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
 }
 .upcoming-sentence {
   margin: 6px 0 0;
@@ -219,7 +239,6 @@
   outline-offset: 1px;
 }
 .upcoming-known {
-  margin-left: auto;
   padding: 2px 8px;
   font-size: 12px;
   border: 1px solid var(--border);

@@ -24,6 +24,9 @@
  *      id. Null draws no ＋ — a host with nowhere to add a card.
  *  @param {(anchor) => void} opts.place   host positioning, called on open
  *  @param {Object} [opts.api]      url builders; see API_DEFAULTS
+ *  @param {(url) => Promise<Response>} [opts.fetch]  how the definition and
+ *      expansion are asked for. A host that preloads them answers from what it
+ *      already has; the default is `fetch`.
  *  @param {(data, target) => void} [opts.onOpen]
  *  @param {(target, status) => void} [opts.onJudged]
  *  @param {() => void} [opts.onLayout]  after anything changes the popup's size
@@ -31,6 +34,7 @@
 export function createPopup(opts) {
   const api = { ...API_DEFAULTS, ...(opts.api ?? {}) };
   const { el: popupEl, scanText, judge, mine, place } = opts;
+  const request = opts.fetch ?? ((url) => fetch(url));
   // A host can lose the ability to add a card while the page is open — Anki
   // quits — so this is a switch rather than only the presence of `mine`.
   let mining = true;
@@ -94,13 +98,13 @@ export function createPopup(opts) {
     // A cross-reference carries its own scan text: the word it names is not
     // in the line, so slicing the line from `start` would offer the chips of
     // whatever was clicked first.
-    const matches = fetch(api.expand(target.scan ?? scanText(target)))
+    const matches = request(api.expand(target.scan ?? scanText(target)))
       .then((r) => r.json())
       .catch(() => []);
 
     let data;
     try {
-      const res = await fetch(api.define(query));
+      const res = await request(api.define(query));
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       data = await res.json();
     } catch (err) {
@@ -344,7 +348,7 @@ export function createPopup(opts) {
   async function linkTarget(term, reading) {
     const from = { surface: term, scan: term, start: target?.start };
     try {
-      const res = await fetch(api.expand(term));
+      const res = await request(api.expand(term));
       const found = await res.json();
       const hit =
         found.find((e) => e.term === term && e.reading === reading) ??

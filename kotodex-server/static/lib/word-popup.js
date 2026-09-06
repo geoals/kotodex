@@ -15,6 +15,29 @@ import { api } from "../api.js";
 let popup = null;
 // The text the expansion scan reads, set by whoever opened the popup.
 let scan = "";
+// Answers already fetched, by URL. A list that knows which words it will be
+// asked about warms this, so the popup draws with no wait at all.
+const preloaded = new Map();
+
+function request(url) {
+  let pending = preloaded.get(url);
+  if (!pending) {
+    pending = fetch(url);
+    preloaded.set(url, pending);
+  }
+  return pending.then((r) => r.clone());
+}
+
+/** Fetch the definition and the expansion for a word before it is asked for. */
+export function preload(target, text) {
+  const query = new URLSearchParams({ term: target.term });
+  if (target.reading) query.set("reading", target.reading);
+  request(defineUrl(query.toString()));
+  request(expandUrl((text ?? "").slice(target.start ?? 0)));
+}
+
+const defineUrl = (query) => `/api/reader/define?${query}`;
+const expandUrl = (text) => `/api/reader/expand?${new URLSearchParams({ text })}`;
 
 function element() {
   let el = document.getElementById("word-popup");
@@ -32,10 +55,8 @@ function instance() {
   if (popup) return popup;
   popup = createPopup({
     el: element(),
-    api: {
-      define: (query) => `/api/reader/define?${query}`,
-      expand: (text) => `/api/reader/expand?${new URLSearchParams({ text })}`,
-    },
+    api: { define: defineUrl, expand: expandUrl },
+    fetch: request,
     scanText: (target) => scan.slice(target.start ?? 0),
     // The only write on this surface, and it takes a deliberate press: looking
     // at a word here is not meeting it, so nothing else the popup does touches
@@ -81,15 +102,14 @@ export function close() {
 }
 
 /** Anchored in document coordinates so the popup stays on its word as the page
- *  scrolls, below it where there is room and above it otherwise. */
+ *  scrolls, always below it — the page scrolls, so a popup that runs past the
+ *  bottom is reached by scrolling rather than by covering the word. */
 function place(anchor) {
   const el = element();
   const rect = anchor.getBoundingClientRect();
   const width = el.offsetWidth;
-  const height = el.offsetHeight;
   const left = rect.left + rect.width / 2 - width / 2;
-  const room = window.innerHeight - rect.bottom;
-  const top = room > height || rect.top < height ? rect.bottom + 6 : rect.top - height - 6;
+  const top = rect.bottom + 6;
   el.style.left = `${Math.max(8, Math.min(left, window.innerWidth - width - 8)) + window.scrollX}px`;
   el.style.top = `${top + window.scrollY}px`;
 }
