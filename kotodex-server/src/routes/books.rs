@@ -162,6 +162,10 @@ pub async fn setup_book(
         req.last_page,
     )
     .await?;
+    // The epub is the book, so its body length is the work's total: progress
+    // and the finish estimate work without anyone typing a number in.
+    let work = db::upsert_work(&state.knowledge, &req.work).await?;
+    db::set_work_total_chars(&state.knowledge, work.id, Some(body_chars)).await?;
     Ok(Json(json!({
         "found": found,
         "body_chars": body_chars,

@@ -51,6 +51,8 @@ const MIGRATION_DERIVED_CACHE: &str =
     include_str!("../../migrations/knowledge/017_derived_cache.sql");
 const MIGRATION_SCHEMA_REPAIRS: &str =
     include_str!("../../migrations/knowledge/018_schema_repairs.sql");
+const MIGRATION_BOOK_TOTAL_CHARS: &str =
+    include_str!("../../migrations/knowledge/019_book_total_chars.sql");
 
 /// Create the directory a database file will live in.
 ///
@@ -388,6 +390,14 @@ impl Knowledge {
         // out of new imports and nothing else can introduce one, so a replay is
         // four unindexed `LIKE '%＝%'` scans, one of them over every dictionary
         // entry, that can only ever find nothing.
+        // Books added before setup wrote the work's total length. Once only:
+        // a total cleared by hand afterwards must stay cleared.
+        if !repair_done(&self.0, BOOK_TOTAL_CHARS).await? {
+            sqlx::raw_sql(MIGRATION_BOOK_TOTAL_CHARS)
+                .execute(&self.0)
+                .await?;
+            mark_repaired(&self.0, BOOK_TOTAL_CHARS).await?;
+        }
         if !repair_done(&self.0, STRIP_OKURIGANA).await? {
             sqlx::raw_sql(MIGRATION_STRIP_OKURIGANA_MARKER)
                 .execute(&self.0)
@@ -400,6 +410,7 @@ impl Knowledge {
 
 /// See `018_schema_repairs.sql`.
 const STRIP_OKURIGANA: &str = "strip_okurigana_marker";
+const BOOK_TOTAL_CHARS: &str = "book_total_chars";
 
 async fn repair_done(pool: &SqlitePool, name: &str) -> Result<bool, sqlx::Error> {
     sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM schema_repairs WHERE name = ?)")
