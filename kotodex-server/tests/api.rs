@@ -1493,6 +1493,59 @@ fn tiny_epub() -> Vec<u8> {
 }
 
 #[tokio::test]
+async fn the_story_can_end_before_the_file_does() {
+    let app = TestApp::new().await;
+    let (status, up) = app
+        .send_bytes(
+            "/api/books/upload?title=%E3%83%86%E3%82%B9%E3%83%88",
+            tiny_epub(),
+        )
+        .await;
+    assert_eq!(status, 200, "{up}");
+    let (status, setup) = app
+        .send(
+            "POST",
+            "/api/books/setup",
+            json!({ "work": "テスト", "anchor": "少女は言った" }),
+        )
+        .await;
+    assert_eq!(status, 200, "{setup}");
+    assert_eq!(setup["body_chars"], 20);
+
+    // The last paragraph is the afterword: not part of the book's length.
+    let (status, end) = app
+        .send(
+            "POST",
+            "/api/books/end",
+            json!({ "work": "テスト", "anchor": "それきり黙った" }),
+        )
+        .await;
+    assert_eq!(status, 200, "{end}");
+    assert_eq!(end["body_chars"], 13, "少女は言った それきり黙った");
+
+    // And the bookmark reaching it is the whole book read.
+    let (status, prev) = app
+        .send(
+            "POST",
+            "/api/books/preview",
+            json!({ "work": "テスト", "anchor": "それきり黙った" }),
+        )
+        .await;
+    assert_eq!(status, 200, "{prev}");
+    let (status, _) = app
+        .send(
+            "POST",
+            "/api/books/skip",
+            json!({ "work": "テスト", "end": prev["found"]["end"] }),
+        )
+        .await;
+    assert_eq!(status, 200);
+    let (status, books) = app.send("GET", "/api/books", json!(null)).await;
+    assert_eq!(status, 200, "{books}");
+    assert_eq!(books["books"][0]["progress"], 1.0);
+}
+
+#[tokio::test]
 async fn a_book_is_logged_from_the_line_it_was_left_on() {
     let app = TestApp::new().await;
     let (status, up) = app

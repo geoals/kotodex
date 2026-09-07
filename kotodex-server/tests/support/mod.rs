@@ -67,7 +67,7 @@ impl TestApp {
             // being absent — the case the popup has to survive.
             local_audio_url: "http://127.0.0.1:9".into(),
             highlighter: Default::default(),
-        reading: Default::default(),
+            reading: Default::default(),
             demo: false,
         };
         TestApp {

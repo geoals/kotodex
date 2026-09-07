@@ -16,6 +16,8 @@ pub struct Book {
     /// Byte offsets into the flattened text. See the migration.
     pub body_start: i64,
     pub position: i64,
+    /// Where the story ends. An afterword after it is not part of the book.
+    pub body_end: i64,
     pub body_chars: i64,
     pub text_bytes: i64,
     pub first_page: Option<i64>,
@@ -24,13 +26,14 @@ pub struct Book {
 }
 
 const COLUMNS: &str =
-    "work, body_start, position, body_chars, text_bytes, first_page, last_page, added_ts";
+    "work, body_start, position, body_end, body_chars, text_bytes, first_page, last_page, added_ts";
 
 fn from_row(r: &sqlx::sqlite::SqliteRow) -> Book {
     Book {
         work: r.get("work"),
         body_start: r.get("body_start"),
         position: r.get("position"),
+        body_end: r.get("body_end"),
         body_chars: r.get("body_chars"),
         text_bytes: r.get("text_bytes"),
         first_page: r.get("first_page"),
@@ -74,11 +77,12 @@ pub async fn insert_book(
     added_ts: f64,
 ) -> Result<Book, sqlx::Error> {
     let row = sqlx::query(&format!(
-        "INSERT INTO books (work, text, text_bytes, body_chars, added_ts) \
-         VALUES (?, ?, ?, ?, ?) RETURNING {COLUMNS}",
+        "INSERT INTO books (work, text, text_bytes, body_end, body_chars, added_ts) \
+         VALUES (?, ?, ?, ?, ?, ?) RETURNING {COLUMNS}",
     ))
     .bind(work)
     .bind(text)
+    .bind(text.len() as i64)
     .bind(text.len() as i64)
     .bind(jp_core::text::chars::count_chars(text))
     .bind(added_ts)
@@ -93,15 +97,17 @@ pub async fn set_setup(
     k: &Knowledge,
     work: &str,
     body_start: i64,
+    body_end: i64,
     body_chars: i64,
     first_page: Option<i64>,
     last_page: Option<i64>,
 ) -> Result<(), sqlx::Error> {
     sqlx::query(
-        "UPDATE books SET body_start = ?, body_chars = ?, position = ?, \
+        "UPDATE books SET body_start = ?, body_end = ?, body_chars = ?, position = ?, \
          first_page = ?, last_page = ? WHERE work = ?",
     )
     .bind(body_start)
+    .bind(body_end)
     .bind(body_chars)
     .bind(body_start)
     .bind(first_page)
@@ -115,6 +121,23 @@ pub async fn set_setup(
 pub async fn set_position(k: &Knowledge, work: &str, position: i64) -> Result<(), sqlx::Error> {
     sqlx::query("UPDATE books SET position = ? WHERE work = ?")
         .bind(position)
+        .bind(work)
+        .execute(k.pool())
+        .await?;
+    Ok(())
+}
+
+/// Move where the story ends, on a book already being read. Separate from
+/// setup because it must not touch the position.
+pub async fn set_body_end(
+    k: &Knowledge,
+    work: &str,
+    body_end: i64,
+    body_chars: i64,
+) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE books SET body_end = ?, body_chars = ? WHERE work = ?")
+        .bind(body_end)
+        .bind(body_chars)
         .bind(work)
         .execute(k.pool())
         .await?;

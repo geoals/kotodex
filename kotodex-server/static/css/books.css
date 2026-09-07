@@ -270,3 +270,33 @@
     max-height: 60vh;
   }
 }
+
+.book-end {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.book-end summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+.book-end form {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  margin-top: 8px;
+}
+.book-end label {
+  font-size: 12px;
+  color: var(--muted);
+}
+.book-end input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--page);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 16px;
+}

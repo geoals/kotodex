@@ -53,6 +53,8 @@ const MIGRATION_SCHEMA_REPAIRS: &str =
     include_str!("../../migrations/knowledge/018_schema_repairs.sql");
 const MIGRATION_BOOK_TOTAL_CHARS: &str =
     include_str!("../../migrations/knowledge/019_book_total_chars.sql");
+const MIGRATION_BOOK_BODY_END: &str =
+    include_str!("../../migrations/knowledge/020_book_body_end.sql");
 
 /// Create the directory a database file will live in.
 ///
@@ -196,6 +198,11 @@ impl Knowledge {
         // one that simply publishes none is not re-parsed every startup.
         //
         // Ahead of the `rules` migration below, which clears `seq_checked`.
+        if !has_column(&self.0, "books", "body_end").await? {
+            sqlx::raw_sql(MIGRATION_BOOK_BODY_END)
+                .execute(&self.0)
+                .await?;
+        }
         if !has_column(&self.0, "dictionary_entries", "sequence").await? {
             sqlx::raw_sql("ALTER TABLE dictionary_entries ADD COLUMN sequence INTEGER")
                 .execute(&self.0)

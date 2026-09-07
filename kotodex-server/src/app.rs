@@ -144,6 +144,7 @@ pub fn build_router(state: AppState) -> Router {
             post(books::upload_book).layer(axum::extract::DefaultBodyLimit::max(64 * 1024 * 1024)),
         )
         .route("/api/books/setup", post(books::setup_book))
+        .route("/api/books/end", post(books::set_book_end))
         .route("/api/books/preview", post(books::preview_book))
         .route("/api/books/log", post(books::log_book))
         .route("/api/books/skip", post(books::skip_book))

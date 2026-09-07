@@ -60,8 +60,9 @@ pub async fn list_books(State(state): State<AppState>) -> Result<Json<Value>, Ap
             ));
             // Bytes, not characters: the whole point is a progress bar, and
             // counting the characters left would mean loading the text.
-            let body_bytes = (b.text_bytes - b.body_start).max(1);
-            v["progress"] = json!((b.position - b.body_start) as f64 / body_bytes as f64);
+            let body_bytes = (b.body_end - b.body_start).max(1);
+            let read = (b.position - b.body_start).clamp(0, body_bytes);
+            v["progress"] = json!(read as f64 / body_bytes as f64);
             v
         })
         .collect();
@@ -135,6 +136,9 @@ pub struct SetupBody {
     pub work: String,
     /// A few characters from the first line of the story.
     pub anchor: String,
+    /// A few characters from its last line. Absent means the file ends with
+    /// the story.
+    pub end_anchor: Option<String>,
     /// The printed page numbers the body text runs between.
     pub first_page: Option<i64>,
     pub last_page: Option<i64>,
@@ -152,11 +156,29 @@ pub async fn setup_book(
     let found = books::find(&text, 0, req.anchor.trim())
         .ok_or_else(|| AppError::BadRequest("that text is not in the epub".into()))?;
 
-    let body_chars = jp_core::text::chars::count_chars(&text[found.start..]);
+    let body_end = match req
+        .end_anchor
+        .as_deref()
+        .map(str::trim)
+        .filter(|a| !a.is_empty())
+    {
+        Some(a) => {
+            books::find(&text, found.end, a)
+                .ok_or_else(|| {
+                    AppError::BadRequest(
+                        "that last line is not in the epub after the first one".into(),
+                    )
+                })?
+                .end
+        }
+        None => text.len(),
+    };
+    let body_chars = jp_core::text::chars::count_chars(&text[found.start..body_end]);
     db::books::set_setup(
         &state.knowledge,
         &req.work,
         found.start as i64,
+        body_end as i64,
         body_chars,
         req.first_page,
         req.last_page,
@@ -170,6 +192,43 @@ pub async fn setup_book(
         "found": found,
         "body_chars": body_chars,
         "chars_per_page": books::chars_per_page(body_chars, req.first_page, req.last_page),
+    })))
+}
+
+#[derive(Deserialize)]
+pub struct EndBody {
+    pub work: String,
+    /// A few characters from the last line of the story.
+    pub anchor: String,
+}
+
+/// Move where the story ends on a book already being read.
+///
+/// The epub keeps going after the last printed page — afterword, notes, an
+/// advert for the next volume — and counting that as body stretches every page
+/// estimate and leaves the finished book short of 100%.
+pub async fn set_book_end(
+    State(state): State<AppState>,
+    Json(req): Json<EndBody>,
+) -> Result<Json<Value>, AppError> {
+    let book = db::fetch_book(&state.knowledge, &req.work)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    let text = db::fetch_book_text(&state.knowledge, &req.work)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    let found =
+        books::find(&text, book.body_start as usize, req.anchor.trim()).ok_or_else(|| {
+            AppError::BadRequest("that text is not in the book after the start of the body".into())
+        })?;
+    let body_chars = jp_core::text::chars::count_chars(&text[book.body_start as usize..found.end]);
+    db::books::set_body_end(&state.knowledge, &req.work, found.end as i64, body_chars).await?;
+    let work = db::upsert_work(&state.knowledge, &req.work).await?;
+    db::set_work_total_chars(&state.knowledge, work.id, Some(body_chars)).await?;
+    Ok(Json(json!({
+        "found": found,
+        "body_chars": body_chars,
+        "chars_per_page": books::chars_per_page(body_chars, book.first_page, book.last_page),
     })))
 }
 
