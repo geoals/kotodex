@@ -92,6 +92,7 @@ async fn main() {
         whisper_url: config.whisper_url.clone(),
         local_audio_url: config.local_audio_url.clone(),
         highlighter: Default::default(),
+        reading: Default::default(),
         demo: config.demo,
     };
 

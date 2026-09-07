@@ -2,9 +2,10 @@
 //
 // The popup itself is `web-shared/popup.js`, the same module the VN overlay
 // and yt-mine load. What is here is what is about *this* surface: an ordinary
-// scrolling page with nowhere to send a card and no session to record a lookup
-// against, so it draws a definition and the two judge buttons and nothing
-// else.
+// scrolling page with no session to record a lookup against, so it draws a
+// definition, the two judge buttons and ＋. The card is built by
+// `/api/reader/mine`, the same route the overlay uses, so a word mined from a
+// book's word list is the same card as one mined while reading.
 //
 // It lives outside the Preact tree and is driven imperatively, because the
 // shared module owns its own DOM.
@@ -15,6 +16,10 @@ import { api } from "../api.js";
 let popup = null;
 // The text the expansion scan reads, set by whoever opened the popup.
 let scan = "";
+// The sentence a mine puts on the card, and the work it names as the source —
+// both set by whoever opened the popup.
+let sentence = "";
+let work = "";
 // Answers already fetched, by URL. A list that knows which words it will be
 // asked about warms this, so the popup draws with no wait at all.
 const preloaded = new Map();
@@ -55,7 +60,11 @@ function instance() {
   if (popup) return popup;
   popup = createPopup({
     el: element(),
-    api: { define: defineUrl, expand: expandUrl },
+    api: {
+      define: defineUrl,
+      expand: expandUrl,
+      mined: (term) => `/api/reader/mined?term=${encodeURIComponent(term)}`,
+    },
     fetch: request,
     scanText: (target) => scan.slice(target.start ?? 0),
     // The only write on this surface, and it takes a deliberate press: looking
@@ -76,6 +85,19 @@ function instance() {
         return false;
       }
     },
+    mine: async (target) => {
+      const res = await api("/api/reader/mine", {
+        method: "POST",
+        body: {
+          term: target.key,
+          reading: target.reading ?? "",
+          surface: target.surface ?? target.key,
+          sentence,
+          work,
+        },
+      });
+      return res?.note_id ?? null;
+    },
     place,
   });
   document.addEventListener("click", () => close());
@@ -84,13 +106,15 @@ function instance() {
 }
 
 /** Open on a word, or close if it is the word already open. */
-export function toggle(anchor, target, text) {
+export function toggle(anchor, target, text, source = "") {
   const p = instance();
   if (p.isOpen() && p.anchor() === anchor) return close();
   const previous = p.anchor();
   if (previous) previous.classList.remove("open");
   anchor.classList.add("open");
   scan = text ?? "";
+  sentence = text ?? "";
+  work = source;
   p.show(anchor, target);
 }
 

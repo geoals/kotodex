@@ -243,7 +243,8 @@ async fn capture_status(state: &AppState) -> CaptureStatus {
     let paused = settings.capture_paused;
     let vn_window = crate::services::capture::vn_window_for(state, &settings).await;
     let vn_window = (!vn_window.is_empty()).then_some(vn_window);
-    let work = Some(settings.current_work.clone()).filter(|w| !w.is_empty());
+    let work = crate::services::reading::current_work(state, &settings).await;
+    let work = Some(work).filter(|w| !w.is_empty());
 
     let Some(beat) = beat else {
         return CaptureStatus {

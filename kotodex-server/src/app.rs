@@ -77,6 +77,9 @@ pub struct AppState {
     /// The reading view's Sudachi pipeline, built on the first line that needs
     /// it and shared from then on. See [`reader::highlight::Shared`].
     pub highlighter: reader::highlight::Shared,
+    /// The last answer to "which work is being read", and when it was taken.
+    /// See [`crate::services::reading`].
+    pub reading: crate::services::reading::Cache,
     /// Public demo: serve the seed, change nothing. See [`demo_guard`].
     pub demo: bool,
 }

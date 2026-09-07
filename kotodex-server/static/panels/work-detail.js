@@ -457,6 +457,7 @@ function UpcomingCard({ work, book }) {
               <div class="upcoming">
                 ${terms.map(
                   (t, i) => html`<${UpcomingRow}
+                    work=${work}
                     key=${`${t.headword} ${t.reading} ${i}`}
                     term=${t}
                     known=${judged.has(key(t))}
@@ -488,7 +489,7 @@ function UpcomingCard({ work, book }) {
  * The headword itself opens the popup, so the common case — what does this
  * mean — takes one tap and no sentence.
  */
-function UpcomingRow({ term, known, onKnown }) {
+function UpcomingRow({ work, term, known, onKnown }) {
   const [open, setOpen] = useState(false);
   const text = term.sentence?.text ?? "";
   return html`
@@ -509,6 +510,7 @@ function UpcomingRow({ term, known, onKnown }) {
                 start: term.start,
               },
               text,
+              work,
             );
           }}
           >${term.headword}</span
@@ -521,7 +523,11 @@ function UpcomingRow({ term, known, onKnown }) {
         </button>
       </div>
       ${open &&
-      html`<${UpcomingSentence} sentence=${term.sentence} start=${term.start} />`}
+      html`<${UpcomingSentence}
+        work=${work}
+        sentence=${term.sentence}
+        start=${term.start}
+      />`}
     </div>
   `;
 }
@@ -531,7 +537,7 @@ function UpcomingRow({ term, known, onKnown }) {
  *
  *  Token offsets are UTF-16 code units, which is what a JavaScript string is
  *  indexed in, so they slice the text directly. */
-function UpcomingSentence({ sentence, start }) {
+function UpcomingSentence({ work, sentence, start }) {
   const text = sentence.text;
   const tokens = [...(sentence.tokens ?? [])].sort((a, b) => a.start - b.start);
   const parts = [];
@@ -558,6 +564,7 @@ function UpcomingSentence({ sentence, start }) {
               start: t.start,
             },
             text,
+            work,
           );
         }}
         >${text.slice(t.start, t.start + t.len)}</span

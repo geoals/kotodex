@@ -145,7 +145,8 @@ pub async fn vn_window(state: &AppState) -> String {
 /// surface, so loading them twice for one event is a query per surface per
 /// second for nothing.
 pub async fn vn_window_for(state: &AppState, settings: &db::Settings) -> String {
-    match db::current_work_vn_window(&state.knowledge, &settings.current_work).await {
+    let work = crate::services::reading::current_work(state, settings).await;
+    match db::current_work_vn_window(&state.knowledge, &work).await {
         Ok(Some(w)) if !w.trim().is_empty() => w,
         Ok(_) => settings.vn_window.clone(),
         Err(e) => {

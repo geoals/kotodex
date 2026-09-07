@@ -834,6 +834,16 @@ add to when the question is "does the SQL select what the derivation assumes".
   session is not what was asked for. The checkbox is pre-answered from
   `settings.current_work` and left visible, because a rule the dialog keeps to
   itself is a rule the reader cannot disagree with.
+- **The open windows say which work is being read; the setting is the
+  fallback.** `services::reading::current_work` matches each work's `vn_window`
+  against the focused window, then against every open window while exactly one
+  work claims one, and only then falls back to `settings.current_work`. Picking
+  another title in the Library therefore cannot send a hooked VN's lines to it.
+  Every reader-facing answer goes through that one call — the line's work, the
+  card's source field, the lookup's work, the capture badge and the screenshot
+  target — because they are one claim and must not disagree. Works with no
+  `vn_window` never match, which is what leaves epubs and paper books to the
+  setting.
 - **Reading nothing is a state.** `settings.current_work` takes the empty
   string, and lines captured then are stamped with no title — they count towards
   the day and towards no work. It is reachable from the Today card's switcher

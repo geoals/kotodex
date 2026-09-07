@@ -11,9 +11,13 @@ use crate::error::AppError;
 pub async fn reader_state(State(state): State<AppState>) -> Result<Json<Value>, AppError> {
     let settings = db::load_settings(&state.local).await?;
     let caps = super::capabilities::probe(&state).await;
+    let work = crate::services::reading::current_work(&state, &settings).await;
     Ok(Json(json!({
         "paused": settings.capture_paused,
-        "current_work": settings.current_work,
+        "current_work": work,
+        // What the library is pinned to, which is only the fallback now: the
+        // window in front decides while a hooked game is open.
+        "pinned_work": settings.current_work,
         "capture_available": state.vn_capture_script.is_file(),
         // Quality-only: capture works without it, so the reader shows a hint
         // rather than disabling the mine button.

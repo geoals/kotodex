@@ -186,7 +186,8 @@ pub(crate) async fn record(state: &AppState, term: &str) -> Option<i64> {
         Err(e) => warn!(error = %e, term, "session check failed, recording anyway"),
     }
 
-    let work = (!settings.current_work.is_empty()).then_some(settings.current_work);
+    let work = crate::services::reading::current_work(state, &settings).await;
+    let work = (!work.is_empty()).then_some(work);
 
     match db::insert_lookup(
         &state.knowledge,

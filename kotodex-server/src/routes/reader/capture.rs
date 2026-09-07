@@ -45,8 +45,8 @@ pub async fn set_vn_window(
     State(state): State<AppState>,
     Json(req): Json<SetWindowReq>,
 ) -> Result<Json<Value>, AppError> {
-    let settings = db::load_settings(&state.local).await?;
-    let title = settings.current_work.trim();
+    let title = crate::services::reading::current_work_now(&state).await;
+    let title = title.trim();
     if title.is_empty() {
         return Err(AppError::BadRequest(
             "no work is being read, so there is nothing to set the window on".into(),

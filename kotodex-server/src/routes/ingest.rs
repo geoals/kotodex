@@ -106,12 +106,13 @@ pub async fn ingest_lines(
     }
 
     let now = crate::clock::now_ts();
+    let resolved = crate::services::reading::current_work(&state, &settings).await;
     let fallback_work = body
         .work
         .as_deref()
         .filter(|w| !w.is_empty())
         .map(str::to_string)
-        .or_else(|| (!settings.current_work.is_empty()).then(|| settings.current_work.clone()));
+        .or_else(|| (!resolved.is_empty()).then_some(resolved));
 
     let lines: Vec<db::NewLine> = body
         .lines

@@ -46,6 +46,11 @@ pub struct MineRequest {
     /// sentence. 振る is the card's word; 振っ is what to find in the text.
     pub surface: String,
     pub sentence: String,
+    /// The work the sentence came from. Empty falls back to what is being read
+    /// now, which is the only answer the overlay has; a card mined from a
+    /// book's word list names that book instead.
+    #[serde(default)]
+    pub work: String,
 }
 
 /// `POST /api/reader/mine`
@@ -94,7 +99,14 @@ pub async fn mine(
         &anki.field_sentence,
         bold_surface(&req.sentence, &req.surface),
     );
-    put(&anki.field_source, settings.current_work.clone());
+    put(
+        &anki.field_source,
+        if req.work.is_empty() {
+            crate::services::reading::current_work(&state, &settings).await
+        } else {
+            req.work.clone()
+        },
+    );
     put(
         &anki.field_frequency,
         frequency.map(|f| f.to_string()).unwrap_or_default(),
