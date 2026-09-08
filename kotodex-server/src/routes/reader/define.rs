@@ -21,6 +21,15 @@ pub struct DefineQuery {
     /// Narrows the entries where a spelling has several readings: 空 is そら or
     /// から and they are different words. Absent, every reading is returned.
     pub reading: Option<String>,
+    /// `false` for a surface where opening the popup is not the reader meeting
+    /// the word while reading — the dashboard's word lists. Default `true`:
+    /// the reader surfaces pass nothing.
+    #[serde(default = "yes")]
+    pub record: bool,
+}
+
+fn yes() -> bool {
+    true
 }
 
 /// `GET /api/reader/define?term=<headword>&reading=<reading>`
@@ -37,7 +46,9 @@ pub async fn define(
     // count, and no reading session in yt-mine for one to belong to.
     // `record` gates on a line having arrived recently and dedupes, so a
     // second click on the same word inside the window is one lookup.
-    definition.lookup_id = crate::routes::ankiproxy::record(&state, &q.term).await;
+    if q.record {
+        definition.lookup_id = crate::routes::ankiproxy::record(&state, &q.term).await;
+    }
 
     Ok(Json(definition))
 }
