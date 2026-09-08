@@ -25,9 +25,16 @@
 .jp-popup {
   --scale: 1;
   position: absolute;
-  width: min(41.25rem, calc(57.5vw * var(--scale)));
-  min-height: 8.75rem;
-  max-height: min(46vh, calc(460px * var(--scale)));
+  /* Sized in its own text, bounded by the screen. `em` rather than `rem` or
+     px so the box tracks the host's font size — the overlay multiplies it by
+     `--scale` for phone size — and the viewport terms are only the "never off
+     the edge" bound, never the proportional size.
+     The height cap is the room the anchor actually leaves: the host's `place`
+     measures it and writes `--popup-max`. A host that sets none gets a box the
+     text decides. */
+  width: min(calc(100vw - 1.5rem), 38em);
+  min-height: 8em;
+  max-height: var(--popup-max, min(calc(100vh - 1.5rem), 30em));
   overflow-y: auto;
   box-sizing: border-box;
   padding: 0.875rem 1.06rem 1rem;

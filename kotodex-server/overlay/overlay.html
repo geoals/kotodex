@@ -673,6 +673,11 @@
     display: flex;
     flex-direction: column;
     gap: 0.7rem;
+    /* The panel is taller than a phone screen, and it hangs from the bar rather
+       than from the top of the viewport — so the cap is the room below the bar,
+       measured and written by `sizeSettings`. The tabs stay put and the
+       controls under them scroll. */
+    max-height: var(--panel-max, calc(100vh - 1.5rem));
     padding: 0.9rem 1.1rem;
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-panel);
@@ -688,6 +693,7 @@
   #settings-tabs {
     display: flex;
     gap: 0.3rem;
+    flex: none;
   }
   /* The popup's badge metrics: same border, radius and size, so a chip means
      the same thing in the definition and in the settings behind it. */
@@ -724,6 +730,10 @@
     grid-template-columns: auto 1fr auto;
     align-items: center;
     gap: 0.5rem 0.7rem;
+    overflow-y: auto;
+    /* A grid item's default `min-height: auto` refuses to shrink below its
+       content, which would push the panel past its cap instead of scrolling. */
+    min-height: 0;
   }
   .settings-body[hidden] {
     display: none;
@@ -865,16 +875,16 @@
   }
 
   /* Every Japanese font on the machine, so the list is as long as the machine
-     makes it — scrolled, not wrapped across the game.
+     makes it. It scrolls with the panel rather than in a box of its own: a
+     scroller inside a scroller has to be told how tall it may be, and there is
+     no height it can be given that is right on both a desktop panel and a phone
+     one — too tall and it runs past the panel's own cap and over what is under
+     it, too short and it is a three-row slot on a large screen.
 
      Block, not a flex column: as a column the rows shrink to fit the box, so a
-     long list draws as slivers a few pixels tall and nothing overflows for the
-     scrollbar to appear on. */
+     long list draws as slivers a few pixels tall. */
   #set-font {
     max-width: 21rem;
-    max-height: 14rem;
-    overflow-y: auto;
-    scrollbar-width: thin;
   }
   /* Rows are divs, not buttons: a button stays inline-level whatever `display`
      says, so the list would run two names to a line. */

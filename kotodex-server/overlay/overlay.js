@@ -687,6 +687,7 @@ window.addEventListener("resize", () => {
   apply();
   if (scrollbackOpen()) sizeScrollback();
   if (popup.anchor()) place(popup.anchor());
+  sizeSettings();
 });
 
 // Resizing the type by dragging it, which writes `scale` — the same setting the
@@ -1545,7 +1546,21 @@ function showTab(name) {
   settingsBtnEl.classList.remove("off");
   for (const btn of tabBtnEls) btn.classList.toggle("on", btn.value === name);
   for (const body of tabBodyEls) body.hidden = body.dataset.tab !== name;
+  sizeSettings();
   report();
+}
+
+/** Cap the panel at the room below the bar it hangs from. Measured rather than
+ *  assumed: the bar moves with the drag, and at phone size the whole layout is
+ *  scaled. */
+function sizeSettings() {
+  if (settingsPanelEl.hidden) return;
+  settingsPanelEl.style.removeProperty("--panel-max");
+  const top = settingsPanelEl.getBoundingClientRect().top;
+  settingsPanelEl.style.setProperty(
+    "--panel-max",
+    `${Math.max(window.innerHeight - top - EDGE, 0)}px`,
+  );
 }
 
 for (const btn of tabBtnEls) {
@@ -1560,6 +1575,7 @@ for (const btn of tabBtnEls) {
 settingsBtnEl.addEventListener("click", () => {
   settingsPanelEl.hidden = !settingsPanelEl.hidden;
   settingsBtnEl.classList.toggle("off", settingsPanelEl.hidden);
+  sizeSettings();
   report();
   if (!settingsPanelEl.hidden) loadWindows();
 });
@@ -2028,6 +2044,11 @@ function onJudged(target, status) {
  * line out from under the popup. The left is clamped so a word at either end
  * cannot push the popup off screen.
  */
+/** Between the popup and the line it was opened from, and between the popup
+ *  and the edge of the screen. */
+const GAP = 8;
+const EDGE = 8;
+
 function place(word) {
   const rect = word.getBoundingClientRect();
   // Clear of the whole line box for a word in the live line, so the popup never
@@ -2036,23 +2057,27 @@ function place(word) {
   // popup off the top of the screen.
   const anchor = scrollbackEl.contains(word) ? rect : lineEl.getBoundingClientRect();
   const width = popupEl.offsetWidth;
-  const height = popupEl.offsetHeight;
   const left = rect.left + rect.width / 2 - width / 2;
   popupEl.style.left = `${Math.max(12, Math.min(left, window.innerWidth - width - 12))}px`;
-  // Above where there is room, below where there is not. The history panel
-  // hangs from the top of the screen, so its first rows have nothing above
-  // them — and a popup pinned above them would be drawn off-screen.
+
+  // The cap is the room this anchor actually leaves, not a fraction of a
+  // viewport: at phone size the type is scaled up and the screen is short, so a
+  // proportional cap gives a box too small for one sense.
+  const above = anchor.top - GAP - EDGE;
+  const below = window.innerHeight - anchor.bottom - GAP - EDGE;
+  // Whichever side has more room, so a popup never ends up a sliver with a tall
+  // empty screen on the other side of the line.
+  const up = above >= below;
+  popupEl.style.setProperty("--popup-max", `${Math.max(up ? above : below, 0)}px`);
   // Pinned by its bottom edge when it goes above, so that a definition which
   // changes height — paging to a longer dictionary — grows away from the line
-  // rather than down over it. That is worth more than the clamping a `top`
-  // anchor would allow: `place` runs again once the content is in, so the
-  // choice above is made against the real height rather than a placeholder's.
-  if (anchor.top >= height + 16) {
+  // rather than down over it.
+  if (up) {
     popupEl.style.top = "auto";
-    popupEl.style.bottom = `${window.innerHeight - anchor.top}px`;
+    popupEl.style.bottom = `${window.innerHeight - anchor.top + GAP}px`;
   } else {
     popupEl.style.bottom = "auto";
-    popupEl.style.top = `${anchor.bottom + 8}px`;
+    popupEl.style.top = `${anchor.bottom + GAP}px`;
   }
   report();
 }
