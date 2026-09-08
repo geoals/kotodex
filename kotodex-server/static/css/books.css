@@ -271,27 +271,24 @@
   }
 }
 
-.book-end {
-  margin-top: 12px;
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-.book-end summary {
-  cursor: pointer;
-  color: var(--muted);
-}
-.book-end form {
-  display: grid;
-  gap: 6px;
-  justify-items: start;
-  margin-top: 8px;
-}
 .book-end label {
+  display: block;
   font-size: 12px;
   color: var(--muted);
 }
-.book-end input {
-  width: 100%;
+.book-end .meta-hint {
+  display: block;
+  margin: 2px 0 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.book-end-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.book-end-row input {
+  flex: 1;
   padding: 6px 8px;
   border: 1px solid var(--border);
   border-radius: 6px;

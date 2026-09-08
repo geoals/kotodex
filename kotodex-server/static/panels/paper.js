@@ -34,7 +34,6 @@ const fmt = (n) => Math.round(n).toLocaleString("en");
 
 export function PaperLog({ book, onLogged }) {
   const [anchor, setAnchor] = useState("");
-  const [endAnchor, setEndAnchor] = useState("");
   const [minutes, setMinutes] = useState("");
   const [date, setDate] = useState(todayLocal());
   const [preview, setPreview] = useState(null);
@@ -81,33 +80,6 @@ export function PaperLog({ book, onLogged }) {
       setMsg({ ok: true, text: "moved without logging it ✓" });
       setPreview(null);
       setAnchor("");
-      onLogged();
-    } catch (err) {
-      setMsg({ ok: false, text: err.message });
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  // The epub runs past the last printed page; saying where the story ends is
-  // what keeps the page count and the progress bar honest.
-  async function saveEnd(e) {
-    e.preventDefault();
-    setBusy(true);
-    setMsg(null);
-    try {
-      const r = await api("/api/books/end", {
-        method: "POST",
-        body: { work: book.work, anchor: endAnchor },
-      });
-      const cpp = r.chars_per_page
-        ? `, ${fmt(r.chars_per_page)} chars per page`
-        : "";
-      setMsg({
-        ok: true,
-        text: `story ends there — ${r.body_chars.toLocaleString("en")} characters of body text${cpp}`,
-      });
-      setEndAnchor("");
       onLogged();
     } catch (err) {
       setMsg({ ok: false, text: err.message });
@@ -211,24 +183,6 @@ export function PaperLog({ book, onLogged }) {
         msg &&
         html`<p class=${`form-msg ${msg.ok ? "ok" : "error"}`}>${msg.text}</p>`
       }
-      <details class="book-end">
-        <summary>where the story ends</summary>
-        <form onSubmit=${saveEnd}>
-          <label for="book-end-anchor">
-            Last line of the story — anything after it (afterword, notes) stops
-            counting as part of the book
-          </label>
-          <input
-            id="book-end-anchor"
-            type="text"
-            value=${endAnchor}
-            onInput=${(e) => setEndAnchor(e.currentTarget.value)}
-          />
-          <button type="submit" disabled=${busy || endAnchor.trim().length < 2}>
-            save
-          </button>
-        </form>
-      </details>
       ${
         preview &&
         html`
@@ -428,6 +382,76 @@ export function AddPaperBook({ work, onAdded, onDone }) {
             ${msg.text}
           </p>`
         }
+    </div>
+  `;
+}
+
+/** Where the story ends, for a book already set up.
+ *
+ *  The epub keeps going after the last printed page — afterword, notes, an
+ *  advert for the next volume — and counting that as body stretches the page
+ *  numbers and leaves a finished book short of 100%.
+ *
+ *  Not a form: it sits inside the work's edit form, and saves on its own
+ *  button because it is the one field the works endpoint does not carry. */
+export function BookEndField({ book, onChanged }) {
+  const [anchor, setAnchor] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(null);
+
+  async function save() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const r = await api("/api/books/end", {
+        method: "POST",
+        body: { work: book.work, anchor },
+      });
+      const cpp = r.chars_per_page
+        ? `, ${fmt(r.chars_per_page)} chars per page`
+        : "";
+      setMsg({
+        ok: true,
+        text: `${r.body_chars.toLocaleString("en")} characters of body text${cpp}`,
+      });
+      setAnchor("");
+      onChanged?.();
+    } catch (err) {
+      setMsg({ ok: false, text: err.message });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const ends = book.body_end < book.text_bytes;
+
+  return html`
+    <div class="book-end">
+      <label for="book-end-anchor">last line of the story</label>
+      <p class="meta-hint">
+        ${ends
+          ? "Anything after it — afterword, notes — is not part of the book."
+          : "The story runs to the end of the file. Set it if an afterword follows."}
+      </p>
+      <div class="book-end-row">
+        <input
+          id="book-end-anchor"
+          type="text"
+          value=${anchor}
+          placeholder="copied off the last page"
+          onInput=${(e) => setAnchor(e.currentTarget.value)}
+        />
+        <button
+          type="button"
+          class="ghost"
+          disabled=${busy || anchor.trim().length < 2}
+          onClick=${save}
+        >
+          ${busy ? "saving…" : "save"}
+        </button>
+      </div>
+      ${msg &&
+      html`<p class=${`form-msg ${msg.ok ? "ok" : "error"}`}>${msg.text}</p>`}
     </div>
   `;
 }

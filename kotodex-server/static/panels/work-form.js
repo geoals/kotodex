@@ -18,6 +18,7 @@
 import { html } from "htm/preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { api } from "../api.js";
+import { BookEndField } from "./paper.js";
 
 const WORK_STATUSES = ["reading", "planned", "finished", "dropped"];
 
@@ -237,7 +238,15 @@ function windowHint(name, windows) {
  *  property of the work — each game draws in its own window, and switching VNs
  *  switches the target with it. */
 
-export function WorkMetaForm({ work, isCurrent, onSaved, onCancel, onDeleted }) {
+export function WorkMetaForm({
+  work,
+  book,
+  onBookChanged,
+  isCurrent,
+  onSaved,
+  onCancel,
+  onDeleted,
+}) {
   const [msg, setMsg] = useState(null);
   const [busy, setBusy] = useState(false);
   const { windows, focused } = useOpenWindows();
@@ -311,6 +320,8 @@ export function WorkMetaForm({ work, isCurrent, onSaved, onCancel, onDeleted }) 
           placeholder="from jiten.moe"
         />
       </div>
+      ${book &&
+      html`<${BookEndField} book=${book} onChanged=${onBookChanged} />`}
       ${!isBook &&
       html`<div class="work-cover-field">
         <label>cover art</label>

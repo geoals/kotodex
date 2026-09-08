@@ -196,7 +196,10 @@ function WorkCard({ work: w, isCurrent, onOpen }) {
     w.active_secs > 0 ? fmtHours(w.active_secs) : null,
     speed ? `${fmtChars(Math.round(speed))}/h` : null,
   ].filter(Boolean);
-  const leftLabel = left !== null ? `${fmtHours(left * 3600)} left` : null;
+  const leftLabel =
+    left !== null && left * 3600 >= 60 && !done
+      ? `${fmtHours(left * 3600)} left`
+      : null;
 
   return html`
     <div

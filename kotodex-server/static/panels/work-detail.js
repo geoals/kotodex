@@ -145,8 +145,10 @@ export function WorkDetail({ work, works, settings, onBack, onSaved }) {
     pct !== null
       ? `${fmtChars(Math.round(read))} / ${fmtChars(total)} · ${pct.toFixed(0)}%`
       : null;
+  // A finished work has nothing left, and neither has one the bookmark has
+  // reached the end of — an estimate of zero is not an estimate.
   const leftLabel =
-    remainingSecs !== null
+    remainingSecs !== null && remainingSecs >= 60 && !done
       ? `${fmtHours(remainingSecs)} left at this work's ${fmtChars(Math.round(speed))}/h`
       : null;
 
@@ -240,6 +242,11 @@ export function WorkDetail({ work, works, settings, onBack, onSaved }) {
         >
           <${WorkMetaForm}
             work=${row}
+            book=${paper}
+            onBookChanged=${() => {
+              load();
+              loadPaper();
+            }}
             isCurrent=${isCurrent}
             onSaved=${() => {
               setEditing(false);
