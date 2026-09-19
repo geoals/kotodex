@@ -50,7 +50,7 @@ def health():
 
 
 @app.post("/transcribe")
-async def transcribe(audio: UploadFile = File(...), words: bool = False):
+async def transcribe(audio: UploadFile = File(...), words: bool = False, language: str = "ja"):
     suffix = os.path.splitext(audio.filename or "audio.wav")[1]
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp.write(await audio.read())
@@ -60,10 +60,14 @@ async def transcribe(audio: UploadFile = File(...), words: bool = False):
         try:
             segments, _info = model.transcribe(
                 tmp_path,
-                language="ja",
+                # Empty means autodetect, which is what a caller with
+                # arbitrary audio wants; yt-tldr is the one that passes it.
+                language=language or None,
                 vad_filter=True,
                 word_timestamps=words,
-                initial_prompt=INITIAL_PROMPT or None,
+                # The prompt is a punctuated Japanese sample, so it primes
+                # Japanese and skews anything else.
+                initial_prompt=(INITIAL_PROMPT or None) if language == "ja" else None,
             )
             for segment in segments:
                 payload = {"start": round(segment.start, 2), "end": round(segment.end, 2), "text": segment.text.strip()}

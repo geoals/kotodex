@@ -10,7 +10,8 @@ streams Japanese transcript segments back as NDJSON. Listens on port 8100.
 - `POST /transcribe` — multipart upload of an audio file under the `audio`
   field. Streams one JSON object per segment (`start`, `end`, `text`) as NDJSON
   (`application/x-ndjson`). Pass `?words=true` to also get per-word timestamps.
-  Transcription uses `language=ja` with VAD filtering. Client disconnect drops
+  Pass `?language=` to pick the language (`ja` by default; empty autodetects).
+  VAD filtering is always on. Client disconnect drops
   the generator and stops transcription.
 
 ## Configuration
