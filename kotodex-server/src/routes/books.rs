@@ -58,11 +58,7 @@ pub async fn list_books(State(state): State<AppState>) -> Result<Json<Value>, Ap
                 b.first_page,
                 b.last_page
             ));
-            // Bytes, not characters: the whole point is a progress bar, and
-            // counting the characters left would mean loading the text.
-            let body_bytes = (b.body_end - b.body_start).max(1);
-            let read = (b.position - b.body_start).clamp(0, body_bytes);
-            v["progress"] = json!(read as f64 / body_bytes as f64);
+            v["progress"] = json!(books::progress(b.body_start, b.position, b.body_end));
             v
         })
         .collect();

@@ -172,6 +172,16 @@ pub fn sentences_from(text: &str, from: usize) -> impl Iterator<Item = (usize, &
     })
 }
 
+/// How far through the body the reading position is, 0..=1.
+///
+/// Bytes, not characters: the whole point is a progress bar, and counting the
+/// characters left would mean loading the text.
+pub fn progress(body_start: i64, position: i64, body_end: i64) -> f64 {
+    let body = (body_end - body_start).max(1);
+    let read = (position - body_start).clamp(0, body);
+    read as f64 / body as f64
+}
+
 /// Characters per printed page, from the page numbers the body text runs
 /// between. `None` until both are known.
 pub fn chars_per_page(

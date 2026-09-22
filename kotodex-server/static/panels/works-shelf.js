@@ -189,8 +189,12 @@ function WorkCard({ work: w, isCurrent, onOpen }) {
   const speed = workSpeedPerHour(w);
   // Hours left at this work's own speed. Its own, not your average: a harder
   // VN should say so in its own estimate rather than borrow an easier one's.
-  const left = total && speed ? Math.max(0, total - w.chars) / speed : null;
-  const pct = total ? Math.min(100, (w.chars / total) * 100) : null;
+  // A work with an epub has a reading position, and that is how far in you
+  // are. The logged character count is not: it misses everything the position
+  // was moved past without a session behind it.
+  const read = w.progress != null && total ? total * w.progress : w.chars;
+  const left = total && speed ? Math.max(0, total - read) / speed : null;
+  const pct = total ? Math.min(100, (read / total) * 100) : null;
   const facts = [
     fmtChars(w.chars),
     w.active_secs > 0 ? fmtHours(w.active_secs) : null,

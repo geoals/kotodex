@@ -6,7 +6,7 @@
 //! yet (a planned VN) still get a row, or the queue would be invisible until
 //! reading starts.
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use axum::Json;
 use axum::extract::{Path, Query, State};
@@ -102,11 +102,22 @@ pub async fn works(State(state): State<AppState>) -> Result<Json<Value>, AppErro
                 .push(s.source.clone());
         }
     }
-    let epub_titles: HashSet<String> = db::fetch_books(&state.knowledge)
+    // Where the reading position stands, for the works that have an epub. The
+    // shelf's bar is "how far in", which the position answers and the logged
+    // character count does not: `skip` moves the position without writing a
+    // session, and a book part-read before its epub was added has most of its
+    // progress behind no session at all.
+    let book_progress: HashMap<String, f64> = db::fetch_books(&state.knowledge)
         .await?
         .into_iter()
-        .map(|b| b.work)
+        .map(|b| {
+            (
+                b.work,
+                crate::books::progress(b.body_start, b.position, b.body_end),
+            )
+        })
         .collect();
+    let epub_titles: HashSet<String> = book_progress.keys().cloned().collect();
     let kind_of = |title: &str| {
         work_kind(
             title,
@@ -130,6 +141,7 @@ pub async fn works(State(state): State<AppState>) -> Result<Json<Value>, AppErro
                 "work": work,
                 "kind": work.as_deref().map(&kind_of),
                 "chars": a.chars,
+                "progress": work.as_ref().and_then(|t| book_progress.get(t)),
                 "active_secs": a.active_secs,
                 "first_read": h.date_of(a.first_ts).to_string(),
                 "last_read": h.date_of(a.last_ts).to_string(),
@@ -142,6 +154,7 @@ pub async fn works(State(state): State<AppState>) -> Result<Json<Value>, AppErro
             "work": title,
             "kind": kind_of(&title),
             "chars": 0,
+            "progress": book_progress.get(&title),
             "active_secs": 0.0,
             "first_read": null,
             "last_read": null,
