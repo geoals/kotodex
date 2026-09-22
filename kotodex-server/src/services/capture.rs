@@ -4,9 +4,12 @@
 //! on the machine running the VN. This module is the boundary: build the
 //! environment the script expects, run it, parse the one JSON object it prints.
 //!
-//! One caller: the auto-capture on card add, which every mine goes through. It
-//! relies on the lookup that must have preceded it — Yomitan's popup, or the
-//! overlay's.
+//! Three callers, one command: the auto-capture on card add, which every mine
+//! goes through and which relies on the lookup that must have preceded it —
+//! Yomitan's popup, or the overlay's — and the mining queue's two halves,
+//! which split that same capture in time. [`Mode::Pool`] takes only what the
+//! ring will forget; [`Mode::Resume`] does the rest later, against what Pool
+//! saved.
 
 use std::time::Duration;
 
@@ -27,6 +30,27 @@ const CAPTURE_TIMEOUT: Duration = Duration::from_secs(90);
 /// current and attaches to the last note added, which is what pressing it
 /// means. The card-add path knows both and has to say so, because by the time
 /// the script runs the reader may have moved on.
+/// Which half of a capture to run — or, for the hotkey and the card path, both
+/// at once.
+///
+/// The split exists because the two halves have different deadlines. Only the
+/// screenshot and the ring window expire; every trim reads the clip, so it can
+/// wait for a reader who has not decided yet.
+#[derive(Default)]
+pub enum Mode {
+    /// Collect and finish in one run.
+    #[default]
+    Full,
+    /// Collect only, into this directory, and stop before the first trim.
+    Pool(std::path::PathBuf),
+    /// Skip collection and finish what `Pool` saved.
+    Resume {
+        clip: Option<String>,
+        image: Option<String>,
+        line_text: String,
+    },
+}
+
 #[derive(Default)]
 pub struct Target {
     /// Epoch seconds to resolve "the current line" as of, so reading on while
@@ -36,6 +60,7 @@ pub struct Target {
     /// Without one the script falls back to the most recently added note, which
     /// is only the right answer while nothing else is added in between.
     pub note_id: Option<i64>,
+    pub mode: Mode,
 }
 
 /// Run vn-capture.sh once and return its parsed JSON result.
@@ -74,6 +99,28 @@ pub async fn run(state: &AppState, target: Target) -> Result<Value, AppError> {
     }
     if let Some(id) = target.note_id {
         cmd.env("VN_NOTE_ID", id.to_string());
+    }
+    match &target.mode {
+        Mode::Full => {}
+        Mode::Pool(outdir) => {
+            cmd.env("VN_POOL", "1");
+            cmd.env("VN_OUTDIR", outdir);
+        }
+        Mode::Resume {
+            clip,
+            image,
+            line_text,
+        } => {
+            // An empty VN_CLIP would read as "collect from the ring", which for
+            // a line read hours ago is the wrong answer rather than a fallback.
+            // The placeholder keeps the script on the resume branch, where a
+            // missing clip is screenshot-only.
+            cmd.env("VN_CLIP", clip.as_deref().unwrap_or("-"));
+            if let Some(image) = image {
+                cmd.env("VN_IMAGE", image);
+            }
+            cmd.env("VN_LINE_TEXT", line_text);
+        }
     }
     let out = match tokio::time::timeout(CAPTURE_TIMEOUT, cmd.output()).await {
         Ok(Ok(out)) => out,

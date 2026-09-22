@@ -47,6 +47,7 @@ impl TestApp {
             local: local.clone(),
             knowledge: knowledge.clone(),
             covers_dir: std::env::temp_dir().join("kotodex-server-test-covers"),
+            queue_media_dir: std::env::temp_dir().join("kotodex-server-test-queue-media"),
             http: reqwest::Client::new(),
             // Pointed at the discard port: no test may reach a real service.
             anki_url: "http://127.0.0.1:9".into(),

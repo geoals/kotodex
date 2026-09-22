@@ -13,8 +13,8 @@ use tower_http::set_header::SetResponseHeaderLayer;
 
 use crate::routes::ankiproxy;
 use crate::routes::{
-    anki, books, days, ingest, kanji, lookups, reader, sessions, settings, summary, timeline,
-    tokenize, vocab, works,
+    anki, books, days, ingest, kanji, lookups, mining_queue, reader, sessions, settings, summary,
+    timeline, tokenize, vocab, works,
 };
 
 const SPA_HTML: &str = include_str!("../templates/spa.html");
@@ -53,6 +53,7 @@ pub struct AppState {
     /// distinct type, so passing the wrong database is a compile error.
     pub knowledge: Knowledge,
     pub covers_dir: std::path::PathBuf,
+    pub queue_media_dir: std::path::PathBuf,
     pub http: reqwest::Client,
     pub anki_url: String,
     pub anki_deck: String,
@@ -136,6 +137,13 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/sessions/{id}/content", get(sessions::session_content))
         .route("/api/text/count", post(sessions::count_text))
         .route("/api/tokenize", post(tokenize::tokenize_text))
+        .route("/api/queue", get(mining_queue::list))
+        .route("/api/queue/count", get(mining_queue::count))
+        .route("/api/queue/rank", post(mining_queue::rank))
+        .route("/api/queue/clear", post(mining_queue::clear))
+        .route("/api/queue/{id}/media/{kind}", get(mining_queue::media))
+        .route("/api/queue/{id}/promote", post(mining_queue::promote))
+        .route("/api/queue/{id}/discard", post(mining_queue::discard))
         .route("/api/day/timeline", get(timeline::day_timeline))
         .route("/api/books", get(books::list_books))
         // An epub is megabytes, past axum's 2 MB default.

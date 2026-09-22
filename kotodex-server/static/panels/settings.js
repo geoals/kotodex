@@ -121,7 +121,16 @@ const FIELDS = [
     min: 0,
     hint: "Same underline against BCCWJ. A word passing either threshold is underlined. 0 turns this off.",
   },
+  {
+    group: "Mining queue",
+    key: "pool_capture",
+    type: "bool",
+    label: "Capture candidates while reading",
+    hint: "Keep a screenshot and the ring's audio for every line holding a word you have never judged, so it can be mined later.",
+  },
 ];
+
+const isBool = (f) => f.type === "bool";
 
 /** Shown straight away. Everything else is a threshold on data that has to
  *  exist first, and reads as a wall of numbers before it does. */
@@ -130,7 +139,7 @@ const GROUPS = ["Goal"];
 /** Folded away, in this order. `Vocabulary` is dropped entirely while the ledger
  *  is empty: a triage floor with nothing to triage is a question with no answer
  *  yet. */
-const ADVANCED_GROUPS = ["Derivation", "Vocabulary"];
+const ADVANCED_GROUPS = ["Derivation", "Vocabulary", "Mining queue"];
 
 export function SettingsView({ settings, vocab, onSaved }) {
   // Edits are staged locally and saved as a batch: several of these interact
@@ -144,7 +153,11 @@ export function SettingsView({ settings, vocab, onSaved }) {
 
   const valueOf = (key) => draft[key] ?? settings[key];
   const dirty = FIELDS.some(
-    (f) => draft[f.key] !== undefined && Number(draft[f.key]) !== settings[f.key],
+    (f) =>
+      draft[f.key] !== undefined &&
+      (isBool(f)
+        ? draft[f.key] !== settings[f.key]
+        : Number(draft[f.key]) !== settings[f.key]),
   );
 
   function edit(key, raw) {
@@ -162,6 +175,10 @@ export function SettingsView({ settings, vocab, onSaved }) {
     const body = {};
     for (const f of FIELDS) {
       if (draft[f.key] === undefined) continue;
+      if (isBool(f)) {
+        if (draft[f.key] !== settings[f.key]) body[f.key] = draft[f.key];
+        continue;
+      }
       const n = Number(draft[f.key]);
       if (!Number.isFinite(n)) {
         setErr(`${f.label} must be a number`);
@@ -205,16 +222,25 @@ export function SettingsView({ settings, vocab, onSaved }) {
           <div class="settings-row" key=${f.key}>
             <label for=${`set-${f.key}`}>${f.label}</label>
             <div class="settings-input">
-              <input
-                id=${`set-${f.key}`}
-                type="number"
-                step=${f.step}
-                min=${f.min}
-                max=${f.max}
-                value=${valueOf(f.key)}
-                onInput=${(e) => edit(f.key, e.currentTarget.value)}
-              />
-              <span class="settings-unit">${f.unit}</span>
+              ${
+                isBool(f)
+                  ? html`<input
+                      id=${`set-${f.key}`}
+                      type="checkbox"
+                      checked=${valueOf(f.key) === true}
+                      onInput=${(e) => edit(f.key, e.currentTarget.checked)}
+                    />`
+                  : html`<input
+                        id=${`set-${f.key}`}
+                        type="number"
+                        step=${f.step}
+                        min=${f.min}
+                        max=${f.max}
+                        value=${valueOf(f.key)}
+                        onInput=${(e) => edit(f.key, e.currentTarget.value)}
+                      />
+                      <span class="settings-unit">${f.unit}</span>`
+              }
             </div>
             ${f.hint && html`<p class="settings-hint">${f.hint}</p>`}
           </div>
@@ -234,7 +260,7 @@ export function SettingsView({ settings, vocab, onSaved }) {
       <form onSubmit=${save}>
         ${GROUPS.map(group)}
         <details class="settings-advanced">
-          <summary>Advanced — how reading is measured</summary>
+          <summary>Advanced</summary>
           <p class="settings-hint">
             Changes recalculate your whole history. Changing back undoes it.
           </p>

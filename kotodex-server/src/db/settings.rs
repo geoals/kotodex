@@ -54,6 +54,12 @@ pub struct Settings {
     /// source beats filtering afterwards, which leaves the raw stream full of
     /// text the reader had said was not reading.
     pub capture_paused: bool,
+    /// Capture a screenshot and the ring's audio for every line holding a word
+    /// the ledger has not judged, and hold it in `mining_queue` for review.
+    ///
+    /// Off by default: on, every line with an unjudged word costs a screenshot
+    /// and a slice of the ring, read or not.
+    pub pool_capture: bool,
     /// Paint each word with what the ledger says about it. Off means the spans
     /// are still there — they are the click targets — and simply carry no
     /// status class. An empty ledger paints nothing either way, so a fresh
@@ -119,6 +125,7 @@ impl Default for Settings {
             reader_common_max_freq_rank: 5000,
             reader_common_max_bccwj_rank: 10000,
             capture_paused: false,
+            pool_capture: false,
             highlight_status: true,
             line_source: "ws".into(),
             line_source_ws_url: "ws://localhost:6677".into(),
@@ -149,6 +156,7 @@ pub const SETTING_KEYS: &[&str] = &[
     "reader_common_max_freq_rank",
     "reader_common_max_bccwj_rank",
     "capture_paused",
+    "pool_capture",
     "highlight_status",
     "line_source",
     "line_source_ws_url",
@@ -158,7 +166,7 @@ pub const SETTING_KEYS: &[&str] = &[
 ];
 
 /// Settings whose stored value is `"1"`/`"0"` rather than a number or free text.
-pub const BOOL_SETTING_KEYS: &[&str] = &["capture_paused", "highlight_status"];
+pub const BOOL_SETTING_KEYS: &[&str] = &["capture_paused", "pool_capture", "highlight_status"];
 
 pub async fn load_settings(pool: &SqlitePool) -> Result<Settings, sqlx::Error> {
     let mut settings = Settings::default();
@@ -203,6 +211,7 @@ pub async fn load_settings(pool: &SqlitePool) -> Result<Settings, sqlx::Error> {
                     .unwrap_or(settings.reader_common_max_bccwj_rank)
             }
             "capture_paused" => settings.capture_paused = value == "1",
+            "pool_capture" => settings.pool_capture = value == "1",
             "highlight_status" => settings.highlight_status = value == "1",
             "line_source" => {
                 if !value.is_empty() {

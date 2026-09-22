@@ -58,6 +58,22 @@ pub async fn mine(
     State(state): State<AppState>,
     Json(req): Json<MineRequest>,
 ) -> Result<Json<Value>, AppError> {
+    let note = build_note(&state, &req).await?;
+    let body =
+        Bytes::from(serde_json::to_vec(&note).map_err(|e| AppError::Upstream(e.to_string()))?);
+    let (_status, replied) = crate::services::card::add_note(&state, body)
+        .await
+        .map_err(AppError::Upstream)?;
+    Ok(Json(added(&replied)))
+}
+
+/// The `addNote` request for one mined word, fields and all.
+///
+/// Separate from [`mine`] because the mining queue builds the same card from a
+/// candidate it saved earlier — same note type, same fields, same bolding.
+/// Only where the media comes from differs, and that is
+/// [`crate::services::card::CaptureSource`]'s business, not this function's.
+pub async fn build_note(state: &AppState, req: &MineRequest) -> Result<Value, AppError> {
     let pool = state.knowledge.pool();
     let settings = crate::db::load_settings(&state.local).await?;
 
@@ -102,7 +118,7 @@ pub async fn mine(
     put(
         &anki.field_source,
         if req.work.is_empty() {
-            crate::services::reading::current_work(&state, &settings).await
+            crate::services::reading::current_work(state, &settings).await
         } else {
             req.work.clone()
         },
@@ -139,22 +155,19 @@ pub async fn mine(
         }},
     });
 
-    let body =
-        Bytes::from(serde_json::to_vec(&note).map_err(|e| AppError::Upstream(e.to_string()))?);
-    let (_status, replied) = crate::services::card::add_note(&state, body)
-        .await
-        .map_err(AppError::Upstream)?;
-    // The id comes back so the open popup can raise its mined badge without
-    // asking Anki a second time — and a duplicate answers `null`, which is the
-    // honest answer to "did this add a card".
-    let note_id = crate::services::card::new_note_id(&replied);
-    // AnkiConnect answers 200 with the refusal in the body, so the status code is
-    // not the outcome: a missing note type reads as a success with no card behind
-    // it. `ok` is whether a card exists now, and `error` is Anki's own sentence.
-    let error = anki_error(&replied);
-    Ok(Json(
-        json!({ "ok": note_id.is_some(), "note_id": note_id, "error": error }),
-    ))
+    Ok(note)
+}
+
+/// What an `addNote` reply means for the caller.
+///
+/// The id comes back so the open popup can raise its mined badge without asking
+/// Anki a second time — and a duplicate answers `null`, which is the honest
+/// answer to "did this add a card". AnkiConnect answers 200 with the refusal in
+/// the body, so the status code is not the outcome: a missing note type reads
+/// as a success with no card behind it.
+pub fn added(replied: &Bytes) -> Value {
+    let note_id = crate::services::card::new_note_id(replied);
+    json!({ "ok": note_id.is_some(), "note_id": note_id, "error": anki_error(replied) })
 }
 
 /// Anki's refusal, in its own words. Empty and null both mean it did not

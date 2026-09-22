@@ -17,6 +17,7 @@
 //! | [`pool`] | — | opens both |
 //! | [`settings`] | `settings` | kotodex.db |
 //! | [`marks`] | `reader_marks` | kotodex.db |
+//! | [`mining_queue`] | `mining_queue` | kotodex.db |
 //! | [`covers`] | `work_covers` | kotodex.db |
 //! | [`lines`] | `lines` | knowledge.db |
 //! | [`works`] | `works` | knowledge.db |
@@ -42,6 +43,7 @@ pub mod covers;
 pub mod lines;
 pub mod lookups;
 pub mod marks;
+pub mod mining_queue;
 pub mod pool;
 pub mod retire_pauses;
 pub mod sessions;
@@ -65,6 +67,13 @@ pub use lookups::{
     retract_lookup, set_lookup_headwords, unnormalized_lookup_terms,
 };
 pub use marks::{fetch_reader_marks, insert_reader_mark};
+pub use mining_queue::{
+    CandidateTerm, NewEntry as NewQueueEntry, QueueEntry, WordRank, discard_all_pending,
+    fetch_entry as fetch_queue_entry, fetch_media as fetch_queue_media,
+    fetch_pending as fetch_pending_queue, fetch_ranking as fetch_queue_ranking,
+    insert_entry as insert_queue_entry, resolve as resolve_queue_entry,
+    save_ranking as save_queue_ranking,
+};
 pub use pool::{create_pool, open_knowledge};
 pub use retire_pauses::retire as retire_pauses;
 pub use sessions::{

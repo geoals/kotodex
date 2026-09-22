@@ -17,6 +17,26 @@
 #                      kotodex-server passes when a card add triggers the capture,
 #                      so reading on while the capture works can't move the
 #                      anchor onto the next line.
+#      VN_POOL=1       capture only what the ring will forget — the screenshot
+#                      and the raw PCM window — into VN_OUTDIR, print JSON and
+#                      stop. No VAD, no whisper, no Anki. For kotodex-server's
+#                      mining queue, which fires this per candidate line while
+#                      reading and cannot afford a silero load each time. The
+#                      trims are not skipped but deferred: they read clip.raw,
+#                      not the ring, so promotion can still run them — and the
+#                      sentence trim works better there, where the mined word
+#                      is finally known.
+#      VN_CLIP         resume from a clip saved earlier by VN_POOL instead of
+#      VN_IMAGE        cutting a new one out of the ring. The pair is how a
+#                      queued candidate becomes a card: the ring is long gone,
+#                      but every trim from here on reads the clip, so they all
+#                      still run — the sentence trim for the first time, now
+#                      that VN_NOTE_ID says which word was mined.
+#      VN_LINE_TEXT    the line the saved clip belongs to, for the messages —
+#                      with VN_CLIP the hooker's log no longer holds it.
+#      VN_OUTDIR       where VN_POOL writes. Required with it, and durable:
+#                      the default run directory is tmpfs and does not survive
+#                      a reboot.
 #      VN_NOTE_ID      attach to this note instead of the most recently added
 #                      one — again for the card-add path, which already knows
 #                      which note it just created.
@@ -74,6 +94,11 @@ TRIM_SCRIPT="$SCRIPT_DIR/vn-trim.py"
 VN_WINDOW="${VN_WINDOW:-}"
 VN_ANCHOR_TS="${VN_ANCHOR_TS:-}"
 VN_NOTE_ID="${VN_NOTE_ID:-}"
+VN_POOL="${VN_POOL:-}"
+VN_OUTDIR="${VN_OUTDIR:-}"
+# Set from two places far apart — the ring window below, and the VAD — so it is
+# declared once here rather than reset between them.
+NO_AUDIO=""
 SHOT_NOTE=""
 
 SERVER_URL="${KOTODEX_SERVER_URL:-http://localhost:3200}"
@@ -136,8 +161,59 @@ FIELD_SENTENCE="${KOTODEX_ANKI_FIELD_SENTENCE-Sentence}"
 FIELD_IMAGE="${KOTODEX_ANKI_FIELD_IMAGE-Picture}"
 FIELD_AUDIO="${KOTODEX_ANKI_FIELD_AUDIO-SentenceAudio}"
 
+VN_CLIP="${VN_CLIP:-}"
+VN_IMAGE="${VN_IMAGE:-}"
+
+# === VAD TRIM ===
+# NO_AUDIO: VAD is confident there was no voice at all (an unvoiced line, a
+# narration-only screen). Attaching the raw window there would put ${MAX_LEN}s
+# of room tone on the card, so the capture becomes screenshot-only. A VAD
+# *failure* is different — nothing is known about the audio, so the untrimmed
+# window is still the best guess and gets attached.
+TRIM_NOTE=""
+
+# 16 kHz mono WAV of the current clip — what both VAD passes want.
+vad_wav() { # out.wav
+  ffmpeg -nostdin -loglevel error -f s16le -ar 48000 -ac 2 -i "$TMP/clip.raw" \
+    -ac 1 -ar 16000 -c:a pcm_s16le "$1" -y
+}
+
+# Give up on the audio and keep the screenshot. $1 is the short reason for the
+# card note, $2 the longer one for the desktop; in JSON mode the note is all
+# that comes back, since nobody is looking at this desktop.
+drop_audio() { # short long
+  NO_AUDIO=1
+  TRIM_NOTE=" ($1 — screenshot only)"
+  [ -z "$VN_JSON" ] && notify-send "⚠️ VN Mine" "$2
+If the line was voiced, check the audio output or press sooner after it plays."
+}
+
+
+# === RESUME FROM A SAVED CLIP ===
+# Nothing perishable is left to collect: the screenshot and the audio window
+# were taken when the line was read. Put them where the rest of the script
+# expects them and skip straight to the trims.
+if [ -n "$VN_CLIP" ]; then
+  SCREENSHOT_FILE="screenshot_${TIMESTAMP}.png"
+  LINE_TEXT="${VN_LINE_TEXT:-}"
+  if [ -s "$VN_CLIP" ] && cp "$VN_CLIP" "$TMP/clip.raw"; then
+    # The trim arithmetic below is in bytes of this clip, not of a ring window.
+    CLIP_BYTES=$(stat -c %s "$TMP/clip.raw")
+  else
+    NO_AUDIO=1
+  fi
+  if [ -n "$VN_IMAGE" ] && [ -s "$VN_IMAGE" ]; then
+    cp "$VN_IMAGE" "$TMP/$SCREENSHOT_FILE"
+  else
+    SHOT_NOTE=" (no picture)"
+  fi
+fi
+
 # === LOCATE THE VOICELINE START (before the screenshot — anchor the line at
 # the press so advancing to the next line immediately after can't re-anchor) ===
+if [ -n "$VN_CLIP" ]; then
+  : # resumed above — the ring holds nothing about this line any more
+else
 [ -s "$LINES_LOG" ] || die "No hooked lines logged yet. Is kotodex-capture running and Textractor copying to clipboard?"
 # With VN_ANCHOR_TS, the newest line *as of that instant* — the line that was on
 # screen when the card was added, not whatever is on screen now. The card-add
@@ -262,37 +338,18 @@ read -r SKIP_BYTES LEN_BYTES CLIP_START <<<"$(echo "$SEG_SNAPSHOT" | LC_ALL=C aw
 
 # on STALE, awk printed "STALE <line-age-s> <ring-coverage-s>" into the next two fields
 NO_ROOM=""
+# In pool mode an absent clip is not a failure. The hotkey path dies here
+# because the reader is waiting on a card; the queue is capturing lines nobody
+# asked about, and a screenshot alone is still worth keeping.
 case "$SKIP_BYTES" in
-STALE) die "Last hooked line is ${LEN_BYTES}s old but the ring only holds the last ${CLIP_START}s of audio — press the hotkey sooner after the voiceline plays:
+STALE)
+  [ -n "$VN_POOL" ] && NO_AUDIO=1 ||
+    die "Last hooked line is ${LEN_BYTES}s old but the ring only holds the last ${CLIP_START}s of audio — press the hotkey sooner after the voiceline plays:
 $LINE_TEXT" ;;
-EMPTY) die "No audio available after the hooked line yet" ;;
+EMPTY)
+  [ -n "$VN_POOL" ] && NO_AUDIO=1 || die "No audio available after the hooked line yet" ;;
 SHORT) NO_ROOM="${LEN_BYTES}s" ;;
 esac
-
-# === VAD TRIM ===
-# NO_AUDIO: VAD is confident there was no voice at all (an unvoiced line, a
-# narration-only screen). Attaching the raw window there would put ${MAX_LEN}s
-# of room tone on the card, so the capture becomes screenshot-only. A VAD
-# *failure* is different — nothing is known about the audio, so the untrimmed
-# window is still the best guess and gets attached.
-TRIM_NOTE=""
-NO_AUDIO=""
-
-# 16 kHz mono WAV of the current clip — what both VAD passes want.
-vad_wav() { # out.wav
-  ffmpeg -nostdin -loglevel error -f s16le -ar 48000 -ac 2 -i "$TMP/clip.raw" \
-    -ac 1 -ar 16000 -c:a pcm_s16le "$1" -y
-}
-
-# Give up on the audio and keep the screenshot. $1 is the short reason for the
-# card note, $2 the longer one for the desktop; in JSON mode the note is all
-# that comes back, since nobody is looking at this desktop.
-drop_audio() { # short long
-  NO_AUDIO=1
-  TRIM_NOTE=" ($1 — screenshot only)"
-  [ -z "$VN_JSON" ] && notify-send "⚠️ VN Mine" "$2
-If the line was voiced, check the audio output or press sooner after it plays."
-}
 
 # The next line arrived too soon for anything in between to be this line's
 # voice. Nothing to extract, nothing to trim — take the screenshot and go.
@@ -307,7 +364,38 @@ if [ -z "$NO_AUDIO" ]; then
     tail -c "+$((SKIP_BYTES + 1))" | head -c "$LEN_BYTES" >"$TMP/clip.raw"
 
   CLIP_BYTES=$(stat -c %s "$TMP/clip.raw")
-  [ "$CLIP_BYTES" -ge 19200 ] || die "Extracted clip is too short (${CLIP_BYTES} bytes)"
+  if [ "$CLIP_BYTES" -lt 19200 ]; then
+    [ -n "$VN_POOL" ] && NO_AUDIO=1 ||
+      die "Extracted clip is too short (${CLIP_BYTES} bytes)"
+  fi
+fi
+
+fi # end of the collect-from-the-ring half
+
+# === POOL MODE ===
+# Stop here. Everything past this point — VAD, the peak test, the sentence
+# trim, the encode — reads clip.raw rather than the ring, so none of it is
+# perishable and all of it can run at promotion instead. Doing it now would
+# mean a silero load per candidate line, while reading.
+if [ -n "$VN_POOL" ]; then
+  [ -n "$VN_OUTDIR" ] || die "VN_POOL needs VN_OUTDIR"
+  mkdir -p "$VN_OUTDIR" || die "Cannot write to $VN_OUTDIR"
+  POOL_IMAGE=""
+  POOL_AUDIO=""
+  if [ -s "$TMP/$SCREENSHOT_FILE" ]; then
+    mv "$TMP/$SCREENSHOT_FILE" "$VN_OUTDIR/$SCREENSHOT_FILE" &&
+      POOL_IMAGE="$VN_OUTDIR/$SCREENSHOT_FILE"
+  fi
+  # Raw rather than encoded: the deferred trims cut byte offsets out of this,
+  # and a lossy round trip before the cut is both slower and worse.
+  if [ -z "$NO_AUDIO" ] && [ -s "$TMP/clip.raw" ]; then
+    mv "$TMP/clip.raw" "$VN_OUTDIR/clip_${TIMESTAMP}.raw" &&
+      POOL_AUDIO="$VN_OUTDIR/clip_${TIMESTAMP}.raw"
+  fi
+  jq -nc --arg image "$POOL_IMAGE" --arg audio "$POOL_AUDIO" --arg line "$LINE_TEXT" \
+    '{ok: true, image: (if $image == "" then null else $image end),
+      audio: (if $audio == "" then null else $audio end), line: $line}'
+  exit 0
 fi
 
 if [ -n "$NO_AUDIO" ]; then

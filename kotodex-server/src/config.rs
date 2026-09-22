@@ -9,6 +9,12 @@ pub struct Config {
     pub listen_addr: String,
     /// Cached cover images, next to the DB by default.
     pub covers_dir: PathBuf,
+    /// Where the mining queue keeps a candidate's screenshot and audio window.
+    ///
+    /// Beside the databases rather than under the run directory, which is
+    /// tmpfs: a queue whose media vanished on reboot would list rows with
+    /// nothing behind them.
+    pub queue_media_dir: PathBuf,
     /// Fallback AnkiConnect URL (the dashboard client's IP is probed first).
     ///
     /// Numeric, not `localhost`: AnkiConnect binds IPv4 loopback only, and
@@ -77,15 +83,18 @@ impl Config {
             name.clone().unwrap_or_default()
         }
 
-        let covers_dir = std::path::Path::new(&db_path)
+        let data_dir = std::path::Path::new(&db_path)
             .parent()
             .unwrap_or_else(|| std::path::Path::new("."))
-            .join("covers");
+            .to_path_buf();
+        let covers_dir = data_dir.join("covers");
+        let queue_media_dir = data_dir.join("queue-media");
         Config {
             db_path,
             knowledge_db_path,
             listen_addr,
             covers_dir,
+            queue_media_dir,
             anki_url: std::env::var("KOTODEX_ANKI_URL")
                 .unwrap_or_else(|_| "http://127.0.0.1:8765".to_string()),
             anki_deck: anki.deck_name.clone(),

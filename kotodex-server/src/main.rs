@@ -78,6 +78,7 @@ async fn main() {
         local,
         knowledge,
         covers_dir: config.covers_dir.clone(),
+        queue_media_dir: config.queue_media_dir.clone(),
         http,
         anki_url: config.anki_url.clone(),
         anki_deck: config.anki_deck.clone(),

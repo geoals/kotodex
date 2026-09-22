@@ -141,6 +141,15 @@ pub async fn ingest_lines(
     if !ids.is_empty() {
         info!(count = ids.len(), source, "ingested lines");
         ensure_work_row(&state, &lines).await;
+        // Detached: a source must not wait on a screenshot tool.
+        if settings.pool_capture {
+            let candidates = ids
+                .iter()
+                .zip(&lines)
+                .map(|(id, l)| (*id, l.ts, l.text.clone(), l.work.clone()))
+                .collect();
+            crate::services::mining_queue::capture_candidates(state.clone(), candidates);
+        }
     }
     Ok(Json(json!({ "ids": ids, "paused": false })))
 }

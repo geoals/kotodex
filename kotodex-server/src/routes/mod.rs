@@ -16,6 +16,7 @@
 //! | [`kanji`] | `/api/kanji` — every kanji read, and how well each is known |
 //! | [`anki`] | `/api/anki/*` — deck snapshot, re-encounter stats, the card report |
 //! | [`vocab`] | `/api/vocab/*` — the knowledge ledger: status counts, rebuild |
+//! | [`mining_queue`] | `/api/queue` — candidates captured while reading, and what becomes of them |
 //! | [`tokenize`] | `/api/tokenize` — the pipeline's output for pasted text |
 //! | [`settings`] | `/api/settings`, `/api/pause` |
 //! | [`reader`] | the `#read` view: line feed, mine, explain |
@@ -33,6 +34,7 @@ pub mod sessions;
 pub mod settings;
 pub mod summary;
 pub mod timeline;
+pub mod mining_queue;
 pub mod tokenize;
 pub mod vocab;
 pub mod works;

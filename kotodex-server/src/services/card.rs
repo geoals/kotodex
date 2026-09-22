@@ -26,6 +26,29 @@ use crate::clock::now_ts;
 /// Returns AnkiConnect's own `(status, body)` so the proxy can relay it
 /// unchanged and the overlay can read the new id out of it.
 pub async fn add_note(state: &AppState, body: Bytes) -> Result<(StatusCode, Bytes), String> {
+    add_note_with(state, body, CaptureSource::Ring).await
+}
+
+/// Where this card's media comes from.
+///
+/// Every card still goes through [`add_note`] — this says only whether the
+/// capture cuts a fresh clip out of the ring, which is right when the line is
+/// on screen now, or finishes one the mining queue saved when it was.
+pub enum CaptureSource {
+    Ring,
+    Saved {
+        clip: Option<String>,
+        image: Option<String>,
+        line_text: String,
+    },
+}
+
+/// [`add_note`], for a caller that knows its media was captured earlier.
+pub async fn add_note_with(
+    state: &AppState,
+    body: Bytes,
+    capture: CaptureSource,
+) -> Result<(StatusCode, Bytes), String> {
     // Stamped before forwarding, because this is the last moment that still
     // answers "which line was on screen when the card was added" — everything
     // after it, Anki's own round-trip included, is time the reader can spend
@@ -46,7 +69,9 @@ pub async fn add_note(state: &AppState, body: Bytes) -> Result<(StatusCode, Byte
             );
             let state = state.clone();
             // Detached: card creation must not wait on an LLM call or a capture.
-            tokio::spawn(async move { enrich_added_note(&state, note_id, &req, anchor_ts).await });
+            tokio::spawn(async move {
+                enrich_added_note(&state, note_id, &req, anchor_ts, capture).await
+            });
         }
         (Some(_), None) => warn!(
             resp = %String::from_utf8_lossy(&resp_bytes),
@@ -164,7 +189,13 @@ async fn mirror_added_note(state: &AppState, note_id: i64, req: &Value) {
 ///
 /// All of this happens behind a tab nobody is watching, so the notification at the
 /// end is the only report, and it is sent only when nothing failed.
-async fn enrich_added_note(state: &AppState, note_id: i64, req: &Value, anchor_ts: f64) {
+async fn enrich_added_note(
+    state: &AppState,
+    note_id: i64,
+    req: &Value,
+    anchor_ts: f64,
+    capture_source: CaptureSource,
+) {
     // CompactDef: only when a target field and an API key are configured.
     let fields = req.pointer("/params/note/fields");
     let word = fields
@@ -198,6 +229,18 @@ async fn enrich_added_note(state: &AppState, note_id: i64, req: &Value, anchor_t
         let target = crate::services::capture::Target {
             anchor_ts: Some(anchor_ts),
             note_id: Some(note_id),
+            mode: match capture_source {
+                CaptureSource::Ring => crate::services::capture::Mode::Full,
+                CaptureSource::Saved {
+                    clip,
+                    image,
+                    line_text,
+                } => crate::services::capture::Mode::Resume {
+                    clip,
+                    image,
+                    line_text,
+                },
+            },
         };
         match crate::services::capture::run(state, target).await {
             Ok(result) => {

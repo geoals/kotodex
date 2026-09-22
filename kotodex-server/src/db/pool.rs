@@ -1,10 +1,10 @@
 //! Opening the two databases, and the migrations kotodex-server owns.
 //!
 //! kotodex-server holds two: its own (`settings`, `reader_marks`,
-//! `work_covers`) and jp-core's shared `knowledge.db` (`lines`, `works`,
-//! `manual_sessions`, `anki_notes`, `word_days`, `lookups`, and the dictionary
-//! cache). Only the first is migrated here — the shared schema has one owner,
-//! and it is [`jp_core::knowledge`].
+//! `work_covers`, `mining_queue`) and jp-core's shared `knowledge.db`
+//! (`lines`, `works`, `manual_sessions`, `anki_notes`, `word_days`, `lookups`,
+//! and the dictionary cache). Only the first is migrated here — the shared
+//! schema has one owner, and it is [`jp_core::knowledge`].
 //!
 //! Migrations are plain `.sql` files replayed unconditionally on every start —
 //! each is written to be idempotent (`CREATE TABLE IF NOT EXISTS`), so there is
@@ -19,6 +19,9 @@ use sqlx::{Row, SqlitePool};
 const MIGRATION_LOCAL: &str = include_str!("../../migrations/001_settings.sql");
 const MIGRATION_READER_MARKS: &str = include_str!("../../migrations/002_reader_marks.sql");
 const MIGRATION_WORK_COVERS: &str = include_str!("../../migrations/003_work_covers.sql");
+const MIGRATION_MINING_QUEUE: &str = include_str!("../../migrations/004_mining_queue.sql");
+const MIGRATION_MINING_QUEUE_RANKS: &str =
+    include_str!("../../migrations/005_mining_queue_ranks.sql");
 
 /// The name this database had before the crate was called kotodex-server.
 const FORMER_DB_NAME: &str = "read-stats.db";
@@ -82,6 +85,10 @@ pub async fn create_pool(db_path: &str) -> Result<SqlitePool, sqlx::Error> {
     sqlx::raw_sql(MIGRATION_LOCAL).execute(&pool).await?;
     sqlx::raw_sql(MIGRATION_READER_MARKS).execute(&pool).await?;
     sqlx::raw_sql(MIGRATION_WORK_COVERS).execute(&pool).await?;
+    sqlx::raw_sql(MIGRATION_MINING_QUEUE).execute(&pool).await?;
+    sqlx::raw_sql(MIGRATION_MINING_QUEUE_RANKS)
+        .execute(&pool)
+        .await?;
     Ok(pool)
 }
 

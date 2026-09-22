@@ -230,12 +230,14 @@ cmd_browser() {
   done
   say "trends tab renders ($(wc -c <"$WORK/dom-trends.html") bytes)"
 
-  # Settings and tokenize: reached from ⚙ rather than from a tab, and both draw
-  # inside the shell, so the header has to come with them.
+  # Settings, tokenize and the mining queue: reached from ⚙ or from the header
+  # badge rather than from a tab, and all draw inside the shell, so the header
+  # has to come with them.
   # Visible text the panel actually draws, per view.
   settings_wants=("Settings" "Advanced")
   tokenize_wants=("Tokenize")
-  for view in settings tokenize; do
+  queue_wants=("Mining queue")
+  for view in settings tokenize queue; do
     "$CHROME" --headless --disable-gpu --no-sandbox --dump-dom --virtual-time-budget=15000 \
       "http://127.0.0.1:$PORT/#$view" >"$WORK/dom-$view.html" 2>>"$WORK/console.log"
     eval "wants=(\"\${${view}_wants[@]}\")"

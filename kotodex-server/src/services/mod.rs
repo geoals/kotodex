@@ -16,6 +16,7 @@
 //! | [`notify`] | the desktop's notification daemon — the one report a finished mine makes |
 //! | [`reading`] | [`desktop`] — which work the open windows say is being read |
 //! | [`llm`] | whichever model the install names, through [`jp_mine_core::llm`] |
+//! | [`mining_queue`] | [`capture`] — keeps a candidate line's media before the ring forgets it |
 //! | [`jp_mine_core::compactdef`] | — (builds the prompt [`llm`] sends, then the field value) |
 //! | [`jp_mine_core::tags`] | — (the two-axis tag rubric both prompts share) |
 //! | [`covers`] | fetches and stores work cover images |
@@ -28,6 +29,7 @@ pub mod card;
 pub mod covers;
 pub mod desktop;
 pub mod llm;
+pub mod mining_queue;
 pub mod notify;
 pub mod reading;
 pub mod vndb;

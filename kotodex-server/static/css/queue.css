@@ -1,0 +1,66 @@
+/* The mining queue: one block per candidate line, rank on the left, the two
+   verdicts on the right. The line's text is the widest thing on the row
+   because it is what the decision is actually made on. */
+
+.queue-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.queue-row {
+  display: grid;
+  grid-template-columns: 3rem 1fr auto;
+  gap: 1rem;
+  align-items: start;
+  padding: 0.85rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.queue-rank {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  padding-top: 0.15rem;
+}
+
+.queue-text {
+  margin: 0 0 0.25rem;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.queue-why {
+  margin: 0 0 0.5rem;
+  font-size: 0.9em;
+}
+
+.queue-word {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.queue-headword {
+  font-size: 1.15em;
+  font-weight: 600;
+}
+
+/* A line carrying other unjudged words is a worse place to meet this one, so
+   say so where the decision is made. */
+.queue-competing {
+  color: var(--muted);
+  font-size: 0.85em;
+}
+
+.queue-verdict {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.queue-badge {
+  border-color: var(--accent);
+}

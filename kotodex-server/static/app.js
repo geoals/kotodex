@@ -22,6 +22,7 @@ import { KanjiView } from "./panels/kanji.js";
 import { VocabView } from "./panels/vocab.js";
 import { TrendsCard } from "./panels/trends.js";
 import { SetupView, isBlocked } from "./panels/setup.js";
+import { MiningQueueView } from "./panels/mining-queue.js";
 
 const REFRESH_MS = 60_000;
 
@@ -48,6 +49,10 @@ function App({ view, sub }) {
   // panel that draws it, because the *shell* is what it decides: with a blocking
   // part missing there is no dashboard worth showing behind it.
   const [caps, setCaps] = useState(null);
+  // The badge is the only thing that remembers the queue exists: nothing else
+  // on the dashboard would ever mention it, and a candidate nobody reviews
+  // expires.
+  const [queuePending, setQueuePending] = useState(0);
 
   function refreshCaps() {
     api("/api/reader/state")
@@ -70,6 +75,12 @@ function App({ view, sub }) {
         // to a few tools, and a slow one must not hold up the numbers.
       ]);
       refreshCaps();
+      // Its own call and its own failure: an install that has never turned
+      // capture on still has the endpoint, but a queue that will not answer
+      // must not blank the dashboard.
+      api("/api/queue/count")
+        .then((q) => setQueuePending(q.pending || 0))
+        .catch(() => setQueuePending(0));
       setSummary(s);
       setDays(d);
       setWorks(w);
@@ -130,8 +141,9 @@ function App({ view, sub }) {
   // than on Today.
   const isSettings = view === "settings";
   const isTokenize = view === "tokenize";
+  const isQueue = view === "queue";
   const isSetup = view === "setup";
-  const offTab = isSettings || isTokenize || isSetup;
+  const offTab = isSettings || isTokenize || isQueue || isSetup;
   const tab = TABS.some((t) => t.id === view)
     ? view
     : view === "books"
@@ -167,6 +179,17 @@ function App({ view, sub }) {
             ${summary.paused ? "▶ resume capture" : "⏸ pause capture"}
           </button>`
         }
+        ${
+          queuePending > 0 &&
+          !summary.demo &&
+          html`<a
+            class="pause-btn queue-badge"
+            href="#queue"
+            title="Lines captured while reading, waiting to be judged"
+          >
+            ${`${queuePending} pending`}
+          </a>`
+        }
         <a
           class=${`pause-btn${offTab ? " paused" : ""}`}
           href=${offTab ? "#today" : "#settings"}
@@ -197,6 +220,8 @@ function App({ view, sub }) {
         ? html`<${SetupView} onReady=${refreshCaps} />`
         : isTokenize
         ? html`<${TokenizeView} />`
+        : isQueue
+        ? html`<${MiningQueueView} />`
         : isSettings
           ? html`<${SettingsView}
                 settings=${settings}
