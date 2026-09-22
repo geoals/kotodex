@@ -44,7 +44,7 @@ export function preload(target, text) {
 // `record=0`: this page is not a reading session, so looking a word up here
 // must not land in `lookups` — a book read on paper still has lines arriving,
 // which is the only test the recorder applies.
-const defineUrl = (query) => `/api/reader/define?${query}&record=0`;
+const defineUrl = (query) => `/api/reader/define?${query}&record=false`;
 const expandUrl = (text) => `/api/reader/expand?${new URLSearchParams({ text })}`;
 
 function element() {
