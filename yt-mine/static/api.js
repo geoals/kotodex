@@ -67,3 +67,18 @@ export async function exportSentences(jobId, sentences) {
   if (!res.ok) throw new Error(body.error || 'Export failed');
   return body;
 }
+
+export async function fetchPrimer(videoId) {
+  const res = await request(`${BASE}/${videoId}/primer`);
+  return res.json();
+}
+
+export async function translateText(text) {
+  const res = await request(`${BASE}/translate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  });
+  const body = await res.json();
+  return body.translation;
+}

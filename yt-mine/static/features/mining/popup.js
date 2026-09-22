@@ -12,8 +12,7 @@
 // was clicked.
 
 import { createPopup } from '/shared/popup.js';
-import { judged, exportedIds, exportResult } from './state.js';
-import { judgeWord, exportSentences } from '../../api.js';
+import { markStatus, mineWord } from './actions.js';
 
 let popup = null;
 let ctx = { videoId: null, jobId: null, sentenceId: null, text: '' };
@@ -50,13 +49,7 @@ function instance() {
         }).catch(() => {}),
     },
     scanText: (target) => ctx.text.slice(target.start ?? 0),
-    judge: async (target, status) => {
-      if (!(await judgeWord(target.key, target.reading, status))) return false;
-      // The tokens came from the server with the status they had when the
-      // sentence was fetched; this is what repaints them without a refetch.
-      judged.value = new Map(judged.value).set(`${target.key} ${target.reading}`, status);
-      return true;
-    },
+    judge: (target, status) => markStatus(target.key, target.reading, status),
     mine: (target) => exportOne(target),
     place,
   });
@@ -117,26 +110,10 @@ function place(anchor) {
  * Not a selection to commit later: a video is read a sentence at a time, and
  * the word being looked at is the word the card is about. `target` is what the
  * popup is open on, so a compound picked out of the scan (経年劣化) is what
- * gets mined rather than the token that was clicked. */
-async function exportOne(target) {
-  try {
-    const result = await exportSentences(ctx.jobId, [
-      { id: ctx.sentenceId, target_word: target.key, target_reading: target.reading },
-    ]);
-    exportedIds.value = new Set([...exportedIds.value, ...result.exported_ids]);
-    exportResult.value = `${target.key} exported to Anki.`;
-  } catch (err) {
-    exportResult.value = `Error: ${err.message}`;
-    return null;
-  }
-  // Left open, as the overlay leaves it: the badge going green on the word just
-  // mined is the report, and it is a link to the card from the moment it
-  // appears. The export answers with a count rather than an id, so the card is
-  // found the same way the badge finds any other — by asking Anki for it.
-  try {
-    const res = await fetch(`/api/mined?term=${encodeURIComponent(target.key)}`);
-    return (await res.json()).note_id;
-  } catch {
-    return null;
-  }
+ * gets mined rather than the token that was clicked.
+ *
+ * The popup is left open, as the overlay leaves it: the badge going green on
+ * the word just mined is the report, and it is a link to the card. */
+function exportOne(target) {
+  return mineWord(ctx.jobId, ctx.sentenceId, target.key, target.reading);
 }

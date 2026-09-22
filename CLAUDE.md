@@ -23,7 +23,10 @@ any Kotodex in it; everything that is the product carries it.
   and **must not** use `export` — see the card-authoring rule below
 - `yt-mine/` — YouTube sentence mining (Axum JSON API + Preact SPA, SQLite, Anki
   export). Whisper over the whole video, never YouTube's auto-captions — see
-  `yt-mine/CLAUDE.md` for why
+  `yt-mine/CLAUDE.md` for why. Two views over the one transcript: the sentence
+  list, and `/{video_id}/primer` — the words in a video the ledger does not call known,
+  ranked by how often they come back, for reading before watching something
+  above your level
 - `manga-mine/` — physical manga sentence mining (photo inbox → crop → OCR →
   Anki, stateless). See `manga-mine/CLAUDE.md`
 - `sources/` — what hands captured text to the ledger. One job, one contract:
@@ -108,7 +111,7 @@ only `windows-sys` and the one file is how its FFI is verified.
 | --------------- | ----------------------------------------------------------------------------------------------------------------- | -------------------- |
 | `knowledge.db`  | dictionary cache (+ role), `derived_cache`, `works`, `lines`, `manual_sessions`, `anki_notes`, `word_days`, `lookups`, `vocabulary`, `term_surfaces`, `work_names`, `books` | `jp_core::knowledge` |
 | `kotodex.db` | `settings`, `reader_marks`, `work_covers`                                                                          | kotodex-server           |
-| `yt-mine.db`    | `mining_jobs`, `mining_sentences`                                                                                  | yt-mine              |
+| `yt-mine.db`    | `mining_jobs`, `mining_sentences`, `primer_words`, `primer_minutes`, `primer_builds`                                                                                  | yt-mine              |
 
 All under `~/.local/share/kotodex/`. The split is by what the data *is*, not by
 which app wrote it first: anything another tool will ask questions of — what has

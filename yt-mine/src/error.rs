@@ -18,6 +18,9 @@ pub enum AppError {
 
     #[error("media error: {0}")]
     Media(String),
+
+    #[error("upstream error: {0}")]
+    Upstream(String),
 }
 
 impl IntoResponse for AppError {
@@ -45,6 +48,10 @@ impl IntoResponse for AppError {
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "media extraction failed".to_string(),
                 )
+            }
+            AppError::Upstream(msg) => {
+                error!(error = %msg, "upstream error");
+                (StatusCode::BAD_GATEWAY, msg.clone())
             }
         };
 

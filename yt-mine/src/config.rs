@@ -20,6 +20,29 @@ pub struct Config {
     pub anthropic_api_key: Option<String>,
     pub whisper_service_url: String,
     pub sudachi_dict_path: PathBuf,
+    pub translate: TranslateConfig,
+}
+
+/// The model the primer's translate button asks. Separate from the card gloss's
+/// provider: a sentence translation is neither worth Opus nor tuned against it.
+pub struct TranslateConfig {
+    pub base_url: String,
+    pub model: String,
+    /// Absent means the primer draws no translate button, not that it fails.
+    pub api_key: Option<String>,
+}
+
+impl TranslateConfig {
+    fn from_env() -> Self {
+        Self {
+            base_url: env::var("KOTODEX_TRANSLATE_BASE_URL")
+                .unwrap_or_else(|_| "https://api.deepseek.com".into()),
+            model: env::var("KOTODEX_TRANSLATE_MODEL").unwrap_or_else(|_| "deepseek-chat".into()),
+            api_key: env::var("KOTODEX_TRANSLATE_API_KEY")
+                .ok()
+                .filter(|k| !k.trim().is_empty()),
+        }
+    }
 }
 
 impl Config {
@@ -45,6 +68,7 @@ impl Config {
             sudachi_dict_path: env::var("KOTODEX_SUDACHI_DICT_PATH")
                 .unwrap_or_else(|_| "system_full.dic".into())
                 .into(),
+            translate: TranslateConfig::from_env(),
             anki: AnkiConfig {
                 tags: vec!["yt-mine".into(), "youtube".into()],
                 ..AnkiConfig::from_env()

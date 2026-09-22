@@ -53,6 +53,7 @@ async fn test_app() -> (axum_test::TestServer, sqlx::SqlitePool) {
         anki_vocab_field: Some("VocabKanji".into()),
         knowledge: jp_core::knowledge::Knowledge::temp().await,
         llm_definer: None,
+        translator: None,
         audio_dir: "/tmp".into(),
         media_dir: "/tmp/media".into(),
     };
@@ -124,6 +125,7 @@ async fn submit_job_creates_and_returns_video_id() {
         anki_vocab_field: Some("VocabKanji".into()),
         knowledge: jp_core::knowledge::Knowledge::temp().await,
         llm_definer: None,
+        translator: None,
         audio_dir: "/tmp".into(),
         media_dir: "/tmp/media".into(),
     };
@@ -292,6 +294,7 @@ async fn define_returns_the_popups_shape() {
         anki_vocab_field: Some("VocabKanji".into()),
         knowledge,
         llm_definer: None,
+        translator: None,
         audio_dir: "/tmp".into(),
         media_dir: "/tmp/media".into(),
     };
@@ -347,6 +350,7 @@ async fn export_returns_count_and_ids() {
         anki_vocab_field: Some("VocabKanji".into()),
         knowledge: jp_core::knowledge::Knowledge::temp().await,
         llm_definer: None,
+        translator: None,
         audio_dir: "/tmp".into(),
         media_dir: "/tmp/media".into(),
     };
@@ -442,6 +446,7 @@ async fn test_app_with_media_dir(
         anki_vocab_field: Some("VocabKanji".into()),
         knowledge: jp_core::knowledge::Knowledge::temp().await,
         llm_definer: None,
+        translator: None,
         audio_dir: "/tmp".into(),
         media_dir,
     };
@@ -634,4 +639,60 @@ async fn vocab_url_returns_spa_shell() {
         body.contains("<div id=\"app\">"),
         "should contain app mount point"
     );
+}
+
+#[tokio::test]
+async fn primer_without_a_tokenizer_reports_upstream() {
+    let (server, pool) = test_app().await;
+    seed_job(&pool, "dQw4w9WgXcQ").await;
+
+    // Fake mode has no highlighter, so the primer cannot be built. It must say
+    // so rather than answer with an empty word list, which reads as "you know
+    // everything in this video".
+    let response = server.get("/api/dQw4w9WgXcQ/primer").await;
+    response.assert_status(StatusCode::BAD_GATEWAY);
+}
+
+#[tokio::test]
+async fn primer_for_unknown_video_returns_404() {
+    let (server, _pool) = test_app().await;
+
+    let response = server.get("/api/nonexistent1/primer").await;
+    response.assert_status(StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn translate_without_a_provider_is_a_bad_request() {
+    let (server, _pool) = test_app().await;
+
+    let response = server
+        .post("/api/translate")
+        .json(&serde_json::json!({ "text": "テスト" }))
+        .await;
+    response.assert_status(StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn translate_rejects_empty_text() {
+    let (server, _pool) = test_app().await;
+
+    let response = server
+        .post("/api/translate")
+        .json(&serde_json::json!({ "text": "   " }))
+        .await;
+    response.assert_status(StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn thumb_without_a_video_file_returns_404() {
+    let (server, pool) = test_app().await;
+    let job_id = seed_job(&pool, "dQw4w9WgXcQ").await;
+    let sentences = db::get_sentences_for_job(&pool, job_id).await.unwrap();
+
+    // The video download lands after the audio, so a primer opened early has
+    // no frame to cut. The row draws without a picture rather than erroring.
+    let response = server
+        .get(&format!("/dQw4w9WgXcQ/sentences/{}/thumb", sentences[0].id))
+        .await;
+    response.assert_status(StatusCode::NOT_FOUND);
 }

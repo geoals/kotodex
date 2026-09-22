@@ -9,9 +9,17 @@ function parseRoute() {
     return { page: 'home' };
   }
 
-  // /{videoId} — everything after the leading slash
-  const videoId = path.slice(1);
-  if (videoId && !videoId.includes('/')) {
+  const [videoId, section, ...rest] = path.slice(1).split('/');
+  if (!videoId || rest.length) {
+    return { page: 'home' };
+  }
+
+  // A real path rather than a tab signal, so the primer survives a reload and
+  // can be linked to — the same reason `?t=` is in the URL and not in state.
+  if (section === 'primer') {
+    return { page: 'primer', videoId };
+  }
+  if (!section) {
     // `?t=` is where the page opens. It survives a reload and a copied link,
     // which a signal would not.
     const t = Number(new URLSearchParams(window.location.search).get('t'));

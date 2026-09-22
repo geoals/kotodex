@@ -4,7 +4,7 @@ use std::time::Duration;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions};
 use sqlx::{Row, SqlitePool};
 
-use crate::models::{Job, JobStatus, Sentence, TranscriptSegment};
+use crate::models::{Job, JobStatus, PrimerMinute, PrimerWord, Sentence, TranscriptSegment};
 
 const MIGRATION: &str = include_str!("../migrations/001_create_mining_tables.sql");
 
@@ -51,6 +51,10 @@ pub async fn create_pool(database_url: &str) -> Result<SqlitePool, sqlx::Error> 
             .execute(&pool)
             .await?;
     }
+
+    sqlx::raw_sql(include_str!("../migrations/008_create_primer_tables.sql"))
+        .execute(&pool)
+        .await?;
 
     Ok(pool)
 }
@@ -325,6 +329,135 @@ pub async fn get_sentences_by_ids(
             start_time: r.get("start_time"),
             end_time: r.get("end_time"),
             created_at: r.get("created_at"),
+        })
+        .collect())
+}
+
+pub async fn primer_built_for(pool: &SqlitePool, job_id: i64) -> Result<Option<i64>, sqlx::Error> {
+    let row = sqlx::query("SELECT sentence_count FROM primer_builds WHERE job_id = ?")
+        .bind(job_id)
+        .fetch_optional(pool)
+        .await?;
+    Ok(row.map(|r| r.get("sentence_count")))
+}
+
+/// Replace a job's primer wholesale, in one transaction.
+///
+/// Wholesale rather than incremental: the counts are over the whole transcript,
+/// so a transcript that grew invalidates every row rather than appending to it.
+pub async fn replace_primer(
+    pool: &SqlitePool,
+    job_id: i64,
+    words: &[PrimerWord],
+    minutes: &[PrimerMinute],
+    sentence_count: i64,
+) -> Result<(), sqlx::Error> {
+    let mut tx = pool.begin().await?;
+
+    sqlx::query("DELETE FROM primer_words WHERE job_id = ?")
+        .bind(job_id)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM primer_minutes WHERE job_id = ?")
+        .bind(job_id)
+        .execute(&mut *tx)
+        .await?;
+
+    for w in words {
+        let times = serde_json::to_string(&w.times).unwrap_or_else(|_| "[]".into());
+        sqlx::query(
+            "INSERT INTO primer_words (job_id, headword, reading, pos, count, \
+                                       first_sentence_id, first_start, first_offset, \
+                                       first_len, freq_rank, bccwj_rank, times) \
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        )
+        .bind(job_id)
+        .bind(&w.headword)
+        .bind(&w.reading)
+        .bind(&w.pos)
+        .bind(w.count)
+        .bind(w.first_sentence_id)
+        .bind(w.first_start)
+        .bind(w.first_offset)
+        .bind(w.first_len)
+        .bind(w.freq_rank)
+        .bind(w.bccwj_rank)
+        .bind(times)
+        .execute(&mut *tx)
+        .await?;
+    }
+
+    for m in minutes {
+        sqlx::query("INSERT INTO primer_minutes (job_id, minute, content_tokens) VALUES (?, ?, ?)")
+            .bind(job_id)
+            .bind(m.minute)
+            .bind(m.content_tokens)
+            .execute(&mut *tx)
+            .await?;
+    }
+
+    sqlx::query(
+        "INSERT INTO primer_builds (job_id, sentence_count) VALUES (?, ?) \
+         ON CONFLICT(job_id) DO UPDATE SET sentence_count = excluded.sentence_count",
+    )
+    .bind(job_id)
+    .bind(sentence_count)
+    .execute(&mut *tx)
+    .await?;
+
+    tx.commit().await
+}
+
+pub async fn get_primer_words(
+    pool: &SqlitePool,
+    job_id: i64,
+) -> Result<Vec<PrimerWord>, sqlx::Error> {
+    let rows = sqlx::query(
+        "SELECT headword, reading, pos, count, first_sentence_id, first_start, first_offset, \
+                first_len, freq_rank, bccwj_rank, times \
+         FROM primer_words WHERE job_id = ? ORDER BY first_start, headword",
+    )
+    .bind(job_id)
+    .fetch_all(pool)
+    .await?;
+
+    Ok(rows
+        .into_iter()
+        .map(|r| {
+            let times: String = r.get("times");
+            PrimerWord {
+                headword: r.get("headword"),
+                reading: r.get("reading"),
+                pos: r.get("pos"),
+                count: r.get("count"),
+                first_sentence_id: r.get("first_sentence_id"),
+                first_start: r.get("first_start"),
+                first_offset: r.get("first_offset"),
+                first_len: r.get("first_len"),
+                freq_rank: r.get("freq_rank"),
+                bccwj_rank: r.get("bccwj_rank"),
+                times: serde_json::from_str(&times).unwrap_or_default(),
+            }
+        })
+        .collect())
+}
+
+pub async fn get_primer_minutes(
+    pool: &SqlitePool,
+    job_id: i64,
+) -> Result<Vec<PrimerMinute>, sqlx::Error> {
+    let rows = sqlx::query(
+        "SELECT minute, content_tokens FROM primer_minutes WHERE job_id = ? ORDER BY minute",
+    )
+    .bind(job_id)
+    .fetch_all(pool)
+    .await?;
+
+    Ok(rows
+        .into_iter()
+        .map(|r| PrimerMinute {
+            minute: r.get("minute"),
+            content_tokens: r.get("content_tokens"),
         })
         .collect())
 }

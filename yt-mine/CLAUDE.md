@@ -63,8 +63,8 @@ line as soon as transcription reaches it.
 - **Traits for external tools** — `MediaDownloader`, `Transcriber`, `AnkiExporter`, `MediaExtractor`, `Tokenizer` (in jp-core), `LlmDefiner` enable mocking via `mockall`
 - **Subprocesses over FFI** — clean boundary for yt-dlp, ffmpeg
 - **Remote whisper-service** — transcription offloaded to separate FastAPI container (NDJSON streaming)
-- **Preact + htm + signals from CDN** — no build step, ES module imports from esm.sh with pinned versions
-- **JSON API + SPA shell** — `/api/*` returns JSON, `/` and `/{video_id}` serve the SPA shell
+- **Preact + htm + signals over an import map** — no build step; `templates/spa.html` maps the bare specifiers onto `web-shared/vendor/`, served at `/shared/`
+- **JSON API + SPA shell** — `/api/*` returns JSON, `/`, `/{video_id}` and `/{video_id}/primer` serve the SPA shell
 
 ## The popup
 
@@ -126,10 +126,45 @@ they are a label, not the view.
 that are not are the reason to stop on it; the button's number is how many
 that is.
 
-## Not built
+## The primer
 
-Frequency thresholds — a filter that asks how common the unknown word is, not
-just that there is one.
+`/{video_id}/primer` is the second view over the same transcript: not what the
+video says, but what to learn before watching it. `routes/primer.rs` and
+`static/features/primer/`.
+
+**Repetition is the topic-detection rule.** A content word that recurs inside
+one video and is not already known is a topic word by construction, because a
+programme's domain vocabulary repeats when the programme is about it. No
+frequency threshold gates the list — one would cut 政策 and 財政, which are
+exactly the words worth priming on.
+
+**Frequency is the sort instead, and both ranks are shown.** The two corpora
+disagree hardest on this genre: 財源 is 3,786 in BCCWJ and 47,569 in Jiten.
+Sorting by the *lower* of the two is what surfaces the common words that simply
+have not been judged — 大臣 534, 増加 609, 市民 715 — and is the same "common in
+either is worth seeing" rule `jp_core::highlight` keeps both ranks for.
+
+**The threshold and the ordering are the client's, over one fetch.** Every
+not-known word ships once with every occurrence time, so the slider and the
+sort cost no request, and neither does the difficulty curve recomputing when a
+word is judged.
+
+**`primer_words` stores only what the transcript decides** — the counts, the
+first sighting, the offsets, and the two ranks (a fact about the dictionaries,
+not the reader). Status is re-read from the ledger on every request in one
+`fetch_many`, so a word judged since the build is already gone from the list
+and nothing needs rebuilding. The build is redone only when the sentence count
+disagrees with `primer_builds`.
+
+**The curve's y is a share, not a count.** Speech density varies more than
+difficulty does, so a raw per-minute count ranks a fast easy minute above a slow
+hard one. `primer_minutes` holds the denominator — every content word spoken,
+known or not — because it does not move when a word is judged and the numerator
+does.
+
+Unlike the transcript's frozen `visible()` view, the primer list re-filters
+live: it is a reading list being worked down, so a word leaving it the moment it
+is marked known is the point.
 
 ## Tokenization & Dictionary
 
@@ -156,6 +191,12 @@ cargo test -p yt-mine -- --ignored                # real subprocess tests
 
 Via env vars, loaded from `.env` (repo root) via `dotenvy`. See `config.rs` and
 `.env.example`.
+
+`KOTODEX_TRANSLATE_API_KEY` turns on the primer's translate button;
+`KOTODEX_TRANSLATE_BASE_URL` and `KOTODEX_TRANSLATE_MODEL` pick the endpoint
+(DeepSeek's chat model by default). It is a separate provider from the card
+gloss's: a sentence translation is neither worth Opus nor tuned against it. No
+key means no button, not a broken primer.
 
 Anki export fields are all configurable via `KOTODEX_ANKI_*` vars (model, deck,
 field mapping). Defaults match the "Japanese sentences" Yomitan note type, and

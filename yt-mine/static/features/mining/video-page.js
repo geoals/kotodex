@@ -7,6 +7,7 @@ import { FilterBar } from './filter-bar.js';
 import { ComprehensionPanel } from './comprehension-panel.js';
 import { judged } from './state.js';
 import { matchesFilter } from './ledger.js';
+import { Tabs } from '../../tabs.js';
 
 export function VideoPage({ videoId, at }) {
   const [job, setJob] = useState(null);
@@ -55,17 +56,24 @@ export function VideoPage({ videoId, at }) {
   }, [at, job?.sentence_count, job?.is_terminal]);
 
   if (error) {
-    return html`<div class="status error"><span class="progress-text">${error}</span></div>`;
+    return html`
+      <${Tabs} videoId=${videoId} active="video" />
+      <div class="status error"><span class="progress-text">${error}</span></div>
+    `;
   }
 
   if (!job) {
-    return html`<div class="status"><span class="progress-text">Loading...</span></div>`;
+    return html`
+      <${Tabs} videoId=${videoId} active="video" />
+      <div class="status"><span class="progress-text">Loading...</span></div>
+    `;
   }
 
   const isDone = job.status === 'done';
   const isTranscribing = job.status === 'transcribing';
 
   return html`
+    <${Tabs} videoId=${videoId} active="video" />
     ${job.video_title && html`<h2>${job.video_title}</h2>`}
     <${JobStatus}
       status=${job.status}

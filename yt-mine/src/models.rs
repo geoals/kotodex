@@ -106,3 +106,36 @@ mod tests {
         assert!(JobStatus::Error.is_terminal());
     }
 }
+
+/// One not-known word of a video, as the primer stores it.
+///
+/// Everything here is a pure function of the transcript and the dictionaries.
+/// Status, frequency ranks and encounter counts are deliberately absent: they
+/// are resolved from the ledger on every request, so judging a word repaints
+/// the primer without rebuilding it.
+#[derive(Debug, Clone)]
+pub struct PrimerWord {
+    pub headword: String,
+    pub reading: String,
+    pub pos: String,
+    pub count: i64,
+    pub first_sentence_id: i64,
+    pub first_start: f64,
+    /// Where the word starts inside its first sentence, in UTF-16 code units —
+    /// what the popup's expansion scan slices at.
+    pub first_offset: i64,
+    pub first_len: i64,
+    pub freq_rank: Option<i64>,
+    pub bccwj_rank: Option<i64>,
+    pub times: Vec<f64>,
+}
+
+/// Content tokens spoken in one minute of the video, known or not.
+///
+/// The difficulty curve's denominator. Stored rather than derived because it
+/// does not change when a word is judged, and the numerator does.
+#[derive(Debug, Clone)]
+pub struct PrimerMinute {
+    pub minute: i64,
+    pub content_tokens: i64,
+}

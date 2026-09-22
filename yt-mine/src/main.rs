@@ -112,6 +112,16 @@ async fn main() {
         })
     };
 
+    let translator = config.translate.api_key.as_ref().map(|key| {
+        info!(model = %config.translate.model, "sentence translation enabled");
+        Arc::new(jp_mine_core::llm::Provider {
+            kind: jp_mine_core::llm::Kind::OpenAi,
+            base_url: config.translate.base_url.clone(),
+            model: config.translate.model.clone(),
+            api_key: key.clone(),
+        })
+    });
+
     let state = AppState {
         db: pool,
         downloader: services.downloader,
@@ -125,6 +135,7 @@ async fn main() {
         anki_url: config.anki_url.clone(),
         anki_vocab_field: config.anki.field_vocab.clone(),
         llm_definer,
+        translator,
         audio_dir: config.audio_dir,
         media_dir,
     };

@@ -1,0 +1,271 @@
+
+.primer-summary {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin: 0 0 0.6rem;
+}
+
+
+/* --- The difficulty curve --- */
+
+.difficulty {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.7rem 0.3rem;
+}
+
+.difficulty-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.3rem;
+}
+
+.difficulty-readout {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.difficulty-value {
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.difficulty-detail {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.difficulty-plot {
+  display: block;
+  width: 100%;
+  height: 120px;
+  overflow: visible;
+}
+
+.difficulty-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.difficulty-tick {
+  fill: var(--text-muted);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A wash, not a block: the line carries the shape and the fill only gives it
+   ground. */
+.difficulty-area {
+  fill: var(--accent);
+  opacity: 0.12;
+}
+
+.difficulty-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.difficulty-crosshair {
+  stroke: var(--text-muted);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+/* The surface ring keeps the dot legible where it crosses the line. */
+.difficulty-dot {
+  fill: var(--accent);
+  stroke: var(--bg-surface);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.difficulty-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.difficulty-hit:focus {
+  outline: none;
+  fill: var(--accent);
+  fill-opacity: 0.12;
+}
+
+
+/* --- The toolbar --- */
+
+.threshold-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.threshold-control input[type='range'] {
+  width: 9rem;
+  accent-color: var(--accent);
+}
+
+.threshold-value {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+
+/* --- The list --- */
+
+.primer-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.primer-row {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.7rem;
+}
+
+.primer-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.primer-word {
+  font-size: 1.25rem;
+  font-family: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 0 0.15em;
+}
+
+.primer-reading {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-family: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+}
+
+.primer-repeats {
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.primer-ranks {
+  display: flex;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+
+.pill {
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.05rem 0.45rem;
+  white-space: nowrap;
+}
+
+.pill.muted {
+  opacity: 0.7;
+}
+
+.primer-example {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.45rem;
+}
+
+.primer-thumb {
+  width: 96px;
+  height: 54px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.primer-sentence {
+  font-family: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+
+.primer-target {
+  color: var(--text);
+  border-bottom: 2px solid var(--accent);
+}
+
+.primer-actions {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+}
+
+.judge-btn,
+.mine-btn,
+.translate-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 0.1rem 0.5rem;
+  cursor: pointer;
+}
+
+.mined-badge {
+  font-size: 0.78rem;
+  color: var(--success-text);
+  background: var(--success-bg);
+  border: 1px solid var(--success-border);
+  border-radius: var(--radius);
+  padding: 0.1rem 0.5rem;
+  text-decoration: none;
+}
+
+.mine-btn:hover:not(:disabled),
+.translate-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.judge-btn.yes:hover {
+  border-color: var(--success-border);
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+
+.judge-btn.no:hover {
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+
+.primer-translation {
+  font-size: 0.85rem;
+  color: var(--text);
+}
