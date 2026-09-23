@@ -185,6 +185,8 @@ async fn get_job_returns_sentences_and_tokens() {
     let sentences = body["sentences"].as_array().unwrap();
     assert_eq!(sentences.len(), 1);
     assert_eq!(sentences[0]["text"], "テスト文");
+    assert_eq!(sentences[0]["start_time"], 0.0);
+    assert_eq!(sentences[0]["end_time"], 3.0);
 
     let tokens = sentences[0]["tokens"].as_array().unwrap();
     assert!(!tokens.is_empty());
@@ -626,6 +628,15 @@ async fn video_url_returns_spa_shell() {
         body.contains("<div id=\"app\">"),
         "should contain app mount point"
     );
+}
+
+#[tokio::test]
+async fn sidebar_url_returns_spa_shell() {
+    let (server, _pool) = test_app().await;
+
+    let response = server.get("/dQw4w9WgXcQ/sidebar").await;
+    response.assert_status_ok();
+    assert!(response.text().contains("<div id=\"app\">"));
 }
 
 #[tokio::test]

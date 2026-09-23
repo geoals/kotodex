@@ -4,7 +4,7 @@ import { toggle, wheel } from './popup.js';
 import { judgeWords } from '../../api.js';
 import { key, notKnown, statusOf } from './ledger.js';
 
-export function SentenceRow({ sentence, videoId, jobId }) {
+export function SentenceRow({ sentence, videoId, jobId, active, onSeek }) {
   const exported = exportedIds.value;
   const audio = audioState.value;
   const marks = judged.value;
@@ -47,12 +47,16 @@ export function SentenceRow({ sentence, videoId, jobId }) {
 
   function handlePlay() {
     window.dispatchEvent(new CustomEvent('play-sentence', {
-      detail: { videoId, sentenceId: sentence.id },
+      detail: { videoId, sentenceId: sentence.id, start: sentence.start_time, end: sentence.end_time },
     }));
   }
 
   return html`
-    <li class=${isExported ? 'exported' : ''} data-start=${sentence.start_seconds}>
+    <li
+      class=${[isExported && 'exported', active && 'now'].filter(Boolean).join(' ')}
+      data-id=${sentence.id}
+      data-start=${sentence.start_seconds}
+    >
       <button
         class="play-btn ${isLoading ? 'loading' : ''}"
         onClick=${handlePlay}
@@ -61,7 +65,9 @@ export function SentenceRow({ sentence, videoId, jobId }) {
       >
         ${isPlaying ? '■' : isLoading ? '○' : '▶'}
       </button>
-      <span class="timestamp">${sentence.timestamp}</span>
+      ${onSeek
+        ? html`<button class="timestamp seek" onClick=${() => onSeek(sentence)} title="Jump here">${sentence.timestamp}</button>`
+        : html`<span class="timestamp">${sentence.timestamp}</span>`}
       <span class="sentence-tokens">
         ${sentence.tokens.map((tok) => {
           if (!tok.is_content_word) {

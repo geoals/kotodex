@@ -55,6 +55,10 @@ struct SentenceJson {
     id: i64,
     timestamp: String,
     start_seconds: u64,
+    /// Exact, where `start_seconds` is floored for display — what a player
+    /// following along compares its playhead against.
+    start_time: f64,
+    end_time: f64,
     text: String,
     tokens: Vec<TokenJson>,
 }
@@ -703,6 +707,8 @@ fn sentence_to_json(view: crate::routes::mining::SentenceView) -> SentenceJson {
         id: view.id,
         timestamp: view.timestamp,
         start_seconds: view.start_seconds,
+        start_time: view.start_time,
+        end_time: view.end_time,
         text: view.text,
         tokens: view
             .tokens

@@ -71,6 +71,10 @@ export function toggle(anchor, target, next) {
   p.show(anchor, target);
 }
 
+export function isOpen() {
+  return popup?.isOpen() ?? false;
+}
+
 export function close() {
   if (!popup) return;
   const anchor = popup.anchor();

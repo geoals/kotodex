@@ -1,49 +1,20 @@
 import { html } from 'htm/preact';
 import { useState, useEffect, useRef } from 'preact/hooks';
-import { fetchJob, pollStatus } from '../../api.js';
+import { useJob } from './use-job.js';
 import { JobStatus } from './job-status.js';
 import { SentenceList } from './sentence-list.js';
 import { FilterBar } from './filter-bar.js';
 import { ComprehensionPanel } from './comprehension-panel.js';
-import { judged } from './state.js';
-import { matchesFilter } from './ledger.js';
+import { visible } from './view.js';
 import { Tabs } from '../../tabs.js';
 
 export function VideoPage({ videoId, at }) {
-  const [job, setJob] = useState(null);
-  const [error, setError] = useState(null);
+  const { job, error, missing } = useJob(videoId);
   const [filter, setFilter] = useState('all');
-  const kept = useRef({ filter: null, ids: new Set(), decided: new Set() });
-  const pollRef = useRef(null);
+  const kept = useRef(null);
   // The list arrives one fetch after the page does, and grows while whisper
   // runs, so landing on the line is a one-shot that waits for it to exist.
   const landed = useRef(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchJob(videoId)
-      .then((data) => { if (!cancelled) setJob(data); })
-      .catch((err) => { if (!cancelled) setError(err.message); });
-    return () => { cancelled = true; };
-  }, [videoId]);
-
-  useEffect(() => {
-    if (!job || job.is_terminal) return;
-
-    const controller = new AbortController();
-    pollRef.current = setInterval(async () => {
-      try {
-        const data = await pollStatus(videoId, job.sentence_count, job.status);
-        if (data) setJob(data);
-      } catch (_) {
-      }
-    }, 2000);
-
-    return () => {
-      clearInterval(pollRef.current);
-      controller.abort();
-    };
-  }, [job?.status, job?.sentence_count, videoId]);
 
   // Whisper transcribes from 0:00, so the line a `t=` link points at does not
   // exist for as long as it takes to reach it — minutes, for a timestamp late
@@ -55,10 +26,10 @@ export function VideoPage({ videoId, at }) {
     landed.current = scrollToTime(at);
   }, [at, job?.sentence_count, job?.is_terminal]);
 
-  if (error) {
+  if (error || missing) {
     return html`
       <${Tabs} videoId=${videoId} active="video" />
-      <div class="status error"><span class="progress-text">${error}</span></div>
+      <div class="status error"><span class="progress-text">${error ?? 'Not processed yet.'}</span></div>
     `;
   }
 
@@ -93,25 +64,6 @@ export function VideoPage({ videoId, at }) {
       isTranscribing=${isTranscribing}
     />
   `;
-}
-
-// A filter is a view, and it is decided once per line rather than re-tested
-// every render: marking the last unknown word in a line known would otherwise
-// delete that line from under the hand that judged it. A line joins or leaves
-// the view when the filter is picked — nothing else moves it.
-function visible(sentences, filter, memo) {
-  if (!sentences) return sentences;
-  if (memo.current.filter !== filter) {
-    memo.current = { filter, ids: new Set(), decided: new Set() };
-  }
-  const { ids, decided } = memo.current;
-  const marks = judged.peek();
-  for (const s of sentences) {
-    if (decided.has(s.id)) continue;
-    decided.add(s.id);
-    if (matchesFilter(s, filter, marks)) ids.add(s.id);
-  }
-  return sentences.filter((s) => ids.has(s.id));
 }
 
 function lastStart(sentences) {

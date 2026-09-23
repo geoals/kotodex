@@ -1,0 +1,51 @@
+{
+  "manifest_version": 3,
+  "name": "yt-mine sidebar",
+  "version": "0.1.0",
+  "description": "yt-mine's transcript beside the YouTube video, following the playhead.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "yt-mine-sidebar@kotodex",
+      "strict_min_version": "142.0",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
+    }
+  },
+  "permissions": [
+    "storage"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.youtube.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "panel.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/*.js"
+      ],
+      "matches": [
+        "https://www.youtube.com/*"
+      ]
+    }
+  ],
+  "options_ui": {
+    "page": "options/options.html"
+  },
+  "icons": {
+    "48": "icons/icon.svg",
+    "96": "icons/icon.svg"
+  }
+}

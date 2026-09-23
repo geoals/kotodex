@@ -9,6 +9,8 @@ pub(crate) struct SentenceView {
     pub(crate) id: i64,
     pub(crate) timestamp: String,
     pub(crate) start_seconds: u64,
+    pub(crate) start_time: f64,
+    pub(crate) end_time: f64,
     pub(crate) tokens: Vec<TokenView>,
     pub(crate) text: String,
 }
@@ -50,6 +52,8 @@ pub(crate) async fn build_sentence_views(
             id: s.id,
             timestamp: format_seconds(s.start_time),
             start_seconds: s.start_time as u64,
+            start_time: s.start_time,
+            end_time: s.end_time,
             tokens: tokens_for(state, &s.text).await,
             text: s.text,
         });

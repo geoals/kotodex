@@ -87,6 +87,9 @@ pub fn build_router(state: AppState) -> Router {
         )
         .route("/{video_id}", get(spa_shell))
         .route("/{video_id}/primer", get(spa_shell))
+        // Framed inside YouTube's own watch page by the Firefox extension in
+        // `extension/`, beside the video it follows.
+        .route("/{video_id}/sidebar", get(spa_shell))
         .nest_service("/static", ServeDir::new(STATIC_DIR))
         .nest_service("/shared", ServeDir::new(SHARED_DIR))
         // The frontend has no build step, so nothing in a URL changes when a

@@ -19,6 +19,9 @@ function parseRoute() {
   if (section === 'primer') {
     return { page: 'primer', videoId };
   }
+  if (section === 'sidebar') {
+    return { page: 'sidebar', videoId };
+  }
   if (!section) {
     // `?t=` is where the page opens. It survives a reload and a copied link,
     // which a signal would not.

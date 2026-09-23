@@ -6,9 +6,11 @@ import { VideoHistory } from './features/mining/video-history.js';
 import { VideoPage } from './features/mining/video-page.js';
 import { AudioPlayer } from './features/mining/audio-player.js';
 import { PrimerPage } from './features/primer/primer-page.js';
+import { SidebarPage } from './features/sidebar/sidebar-page.js';
 
 function App() {
   const { page, videoId, at } = route.value;
+  if (page === 'sidebar') return html`<${SidebarPage} videoId=${videoId} />`;
 
   return html`
     <h1><a href="/">yt-mine</a></h1>

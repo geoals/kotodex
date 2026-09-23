@@ -64,7 +64,7 @@ line as soon as transcription reaches it.
 - **Subprocesses over FFI** — clean boundary for yt-dlp, ffmpeg
 - **Remote whisper-service** — transcription offloaded to separate FastAPI container (NDJSON streaming)
 - **Preact + htm + signals over an import map** — no build step; `templates/spa.html` maps the bare specifiers onto `web-shared/vendor/`, served at `/shared/`
-- **JSON API + SPA shell** — `/api/*` returns JSON, `/`, `/{video_id}` and `/{video_id}/primer` serve the SPA shell
+- **JSON API + SPA shell** — `/api/*` returns JSON, `/`, `/{video_id}`, `/{video_id}/primer` and `/{video_id}/sidebar` serve the SPA shell
 
 ## The popup
 
@@ -165,6 +165,33 @@ does.
 Unlike the transcript's frozen `visible()` view, the primer list re-filters
 live: it is a reading list being worked down, so a word leaving it the moment it
 is marked known is the point.
+
+## The sidebar
+
+`/{video_id}/sidebar` is the transcript framed inside YouTube's own watch page
+by the Firefox extension in `extension/`, so a word heard while watching is
+looked up without leaving the video. `static/features/sidebar/`; the extension's
+README has the install, the message list, and why Firefox's local network
+access check needs a one-time decision.
+
+**The extension is a shell and the page is yt-mine's.** Every route the page
+calls is a yt-mine route, and the rows, the popup, the filters and the job
+polling are the mining page's own modules (`use-job.js`, `view.js`), so a
+change to how a line or a word is drawn reaches both. The extension knows
+YouTube and nothing about Japanese; `extension/src/youtube.js` is the only file
+that knows YouTube's DOM.
+
+**The video is the clock.** The extension reports the `<video>`'s time, and the
+page lights the last line started at or before it. ▶ on a row seeks the
+YouTube player and pauses at the line's end instead of playing yt-mine's clip —
+`playback.js` answers the same `play-sentence` event the row always fires, so
+the row does not know which surface it is on. This is why the sentence JSON
+carries exact `start_time`/`end_time` beside the floored `start_seconds`.
+
+**Following stops for the reader's own input and resumes on a seek or on
+play.** Scrolling the list is the reader looking back, and snapping away from
+that would lose their place; a seek or play is them going back to the video.
+The list never moves while the popup is open.
 
 ## Tokenization & Dictionary
 

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font: 14px system-ui, sans-serif; padding: 12px; }
+    label { display: block; margin-bottom: 4px; }
+    input { width: 100%; max-width: 28em; padding: 4px 6px; }
+    p { color: GrayText; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <form id="form">
+    <label for="server">yt-mine address</label>
+    <input id="server" type="url" required>
+    <p>Reload the YouTube tab after changing it.</p>
+    <button type="submit">Save</button> <span id="saved" hidden>Saved</span>
+  </form>
+  <script type="module" src="options.js"></script>
+</body>
+</html>

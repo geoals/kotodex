@@ -4,7 +4,7 @@ async function request(url, options = {}) {
   const res = await fetch(url, options);
   if (!res.ok && res.status !== 204) {
     const text = await res.text();
-    throw new Error(text || `HTTP ${res.status}`);
+    throw Object.assign(new Error(text || `HTTP ${res.status}`), { status: res.status });
   }
   return res;
 }

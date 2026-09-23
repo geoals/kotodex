@@ -26,7 +26,9 @@ any Kotodex in it; everything that is the product carries it.
   `yt-mine/CLAUDE.md` for why. Two views over the one transcript: the sentence
   list, and `/{video_id}/primer` — the words in a video the ledger does not call known,
   ranked by how often they come back, for reading before watching something
-  above your level
+  above your level. A third surface, `/{video_id}/sidebar`, is the transcript
+  inside YouTube's own page, framed by the Firefox extension in
+  `yt-mine/extension/` and following the video's playhead
 - `manga-mine/` — physical manga sentence mining (photo inbox → crop → OCR →
   Anki, stateless). See `manga-mine/CLAUDE.md`
 - `sources/` — what hands captured text to the ledger. One job, one contract:
