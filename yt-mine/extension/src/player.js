@@ -1,9 +1,8 @@
 /** The YouTube <video>, driven and reported on. `attach` swaps which element
  * it listens to, since YouTube can replace it between videos. */
-export function createPlayer({ isAd }) {
+export function createPlayer({ isAd, seekTo }) {
   let video = null;
   let range = null;
-  let ownSeek = false;
   const listeners = { time: [], jump: [], rangeEnd: [] };
   const emit = (name, ...args) => listeners[name].forEach((fn) => fn(...args));
 
@@ -22,7 +21,13 @@ export function createPlayer({ isAd }) {
   // would run a quarter second into the next line.
   function watchRange() {
     if (!range || !video) return;
-    if (video.currentTime >= range.end) {
+    const t = video.currentTime;
+    if (!range.landed) {
+      // A seek to a position YouTube has not buffered is asynchronous, and
+      // until it lands the playhead is still where it was.
+      range.landed = t >= range.start - 0.3 && t < range.end;
+      if (!range.landed && performance.now() > range.giveUpAt) return endRange();
+    } else if (t >= range.end) {
       range.pausing = true;
       video.pause();
       endRange();
@@ -41,20 +46,15 @@ export function createPlayer({ isAd }) {
     // On `seeking`, not `seeked`: the latter waits for the new position to
     // buffer, and the sidebar should move the moment the playhead does.
     seeking() {
-      if (!ownSeek) endRange();
+      if (range?.landed) endRange();
       report();
       emit('jump', video.currentTime);
     },
-    seeked() {
-      ownSeek = false;
-      report();
-    },
+    seeked: report,
   };
 
   function seek(t) {
-    if (!video) return;
-    ownSeek = true;
-    video.currentTime = Math.max(0, t);
+    if (video) seekTo(video, Math.max(0, t));
   }
 
   return {
@@ -83,7 +83,7 @@ export function createPlayer({ isAd }) {
     },
     playRange(start, end) {
       if (!video) return;
-      range = { end, pausing: false };
+      range = { start, end, landed: false, pausing: false, giveUpAt: performance.now() + 15000 };
       seek(start);
       video.play();
       requestAnimationFrame(watchRange);

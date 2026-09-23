@@ -52,8 +52,11 @@ body:has(.yt-sidebar) {
 }
 
 .sentence-list > li.now {
-  background: hsl(175, 22%, 12%);
-  box-shadow: inset 3px 0 var(--accent);
+  background: hsl(175, 22%, 13%);
+}
+
+.sentence-list > li.now .timestamp {
+  color: var(--accent);
 }
 
 button.timestamp.seek {

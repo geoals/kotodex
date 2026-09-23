@@ -27,3 +27,6 @@ setup-server.log*
 
 # The one-shot unlock for the comment hook, if a session died holding it
 .claude/allow-comments
+
+# web-ext sign keeps the pending AMO upload here to resume it
+yt-mine/extension/.amo-upload-uuid

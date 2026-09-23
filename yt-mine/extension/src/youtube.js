@@ -21,6 +21,22 @@ export function adPlaying() {
   return document.querySelector('#movie_player')?.classList.contains('ad-showing') ?? false;
 }
 
+// Through the player's own API: setting currentTime past what YouTube has
+// buffered is ignored, and the video carries on from where it was.
+export function seekTo(video, t) {
+  const api = document.querySelector('#movie_player')?.wrappedJSObject;
+  if (typeof api?.seekTo === 'function') api.seekTo(t, true);
+  else video.currentTime = t;
+}
+
+// The column shrinks to 320px on a narrow window, too tight for a transcript
+// line and the popup. Only the floor moves; a wide window keeps YouTube's width.
+export function widenSideColumn(minPx) {
+  const style = document.createElement('style');
+  style.textContent = `ytd-watch-flexy { --ytd-watch-flexy-sidebar-min-width: ${minPx}px !important; }`;
+  document.head.append(style);
+}
+
 export function toggleFullscreen() {
   document.querySelector('#movie_player .ytp-fullscreen-button')?.click();
 }

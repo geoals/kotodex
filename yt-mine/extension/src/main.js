@@ -7,7 +7,9 @@ import { createPlayer } from './player.js';
 const settings = await loadSettings();
 const panel = createPanel(settings, { onLoad: () => bridge.reset() });
 const bridge = createBridge(panel.frame, settings.server);
-const player = createPlayer({ isAd: youtube.adPlaying });
+const player = createPlayer({ isAd: youtube.adPlaying, seekTo: youtube.seekTo });
+
+youtube.widenSideColumn(420);
 
 bridge.on('ready', () => {
   panel.ready();

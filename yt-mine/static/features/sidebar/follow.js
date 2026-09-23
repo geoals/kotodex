@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { isOpen as popupOpen } from '../mining/popup.js';
 import { on, playhead } from './host.js';
+import { pinned } from './playback.js';
 
 // timeupdate fires only about four times a second.
 const LEAD = 0.25;
@@ -15,13 +16,22 @@ export function useActiveSentence(sentences, complete) {
   const latest = useRef({ sentences, complete });
   latest.current = { sentences, complete };
 
-  useEffect(() => playhead.subscribe(({ t }) => {
+  function update() {
     const { sentences, complete } = latest.current;
-    setActive(activeSentence(sentences, t, complete)?.id ?? null);
-  }), []);
-  useEffect(() => {
+    const pin = pinned.peek();
+    if (pin && sentences?.some((s) => s.id === pin.id)) return setActive(pin.id);
     setActive(activeSentence(sentences, playhead.peek().t, complete)?.id ?? null);
-  }, [sentences?.length, complete]);
+  }
+
+  useEffect(() => {
+    const offTime = playhead.subscribe(update);
+    const offPin = pinned.subscribe(update);
+    return () => {
+      offTime();
+      offPin();
+    };
+  }, []);
+  useEffect(update, [sentences?.length, complete]);
 
   return sentences?.find((s) => s.id === active) ?? null;
 }
@@ -83,10 +93,14 @@ export function useFollow(activeId) {
     if (!following || activeId == null || popupOpen()) return;
     const row = document.querySelector(`.sentence-list > li[data-id="${activeId}"]`);
     if (!row) return;
-    const rect = row.getBoundingClientRect();
-    const near = rect.bottom > -window.innerHeight && rect.top < window.innerHeight * 2;
-    // An effect runs before the rows are laid out.
-    requestAnimationFrame(() => row.scrollIntoView({ block: 'center', behavior: near ? 'smooth' : 'instant' }));
+    // An effect runs before the rows are laid out. scrollTo rather than
+    // scrollIntoView, which scrolls YouTube's page as well as this frame.
+    requestAnimationFrame(() => {
+      const rect = row.getBoundingClientRect();
+      const near = rect.bottom > -window.innerHeight && rect.top < window.innerHeight * 2;
+      const top = rect.top + window.scrollY - (window.innerHeight - rect.height) / 2;
+      window.scrollTo({ top, behavior: near ? 'smooth' : 'instant' });
+    });
   }, [activeId, following]);
 
   return { following, resume: () => setFollowing(true) };
