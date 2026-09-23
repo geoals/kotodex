@@ -41,12 +41,14 @@ export function createPlayer({ isAd, seekTo }) {
     play: report,
     pause() {
       report();
-      if (range && !range.pausing) endRange();
+      if (range?.landed && !range.pausing) endRange();
     },
     // On `seeking`, not `seeked`: the latter waits for the new position to
-    // buffer, and the sidebar should move the moment the playhead does.
+    // buffer, and the sidebar should move the moment the playhead does. The
+    // range's own seek fires this too, often after it has landed.
     seeking() {
-      if (range?.landed) endRange();
+      const t = video.currentTime;
+      if (range && (t < range.start - 0.5 || t > range.end)) endRange();
       report();
       emit('jump', video.currentTime);
     },
