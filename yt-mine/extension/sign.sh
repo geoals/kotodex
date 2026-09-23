@@ -30,6 +30,7 @@ echo "signing $version"
 
 npx --yes web-ext sign \
   --channel unlisted \
+  --approval-timeout 3600000 \
   --source-dir "$here" \
   --ignore-files sign.sh README.md \
   --artifacts-dir "$root/target/extension" \
