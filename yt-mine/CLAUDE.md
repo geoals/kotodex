@@ -166,6 +166,17 @@ Unlike the transcript's frozen `visible()` view, the primer list re-filters
 live: it is a reading list being worked down, so a word leaving it the moment it
 is marked known is the point.
 
+## Finding words already known
+
+The ledger calls a word known only once the reader says so, so a video reads
+harder than it is by every word never judged. "Find words I likely know"
+(`routes/suggest.rs`, `mining/suggest-known.js`) sends this video's `new` words,
+each with its first line, to the translate model, which picks the loanwords,
+common words, transparent compounds and names this reader knows. Each pick is a
+yes/no, and nothing is written until the reader confirms. `unknown` words are
+not sent: that is a "no" the reader already gave. The prompt's description of
+the reader's level is `system_prompt`.
+
 ## The sidebar
 
 `/{video_id}/sidebar` is the transcript framed inside YouTube's own watch page

@@ -13,7 +13,7 @@ use jp_core::highlight::Highlighter;
 use jp_core::knowledge::Knowledge;
 use jp_core::tokenize::Tokenizer;
 
-use crate::routes::{api, primer};
+use crate::routes::{api, primer, suggest};
 use crate::services::download::MediaDownloader;
 use crate::services::export::AnkiExporter;
 use crate::services::llm::LlmDefiner;
@@ -77,6 +77,10 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/export", post(api::export_sentences))
         .route("/api/{video_id}/primer", get(primer::get_primer))
         .route("/api/translate", post(primer::translate))
+        .route(
+            "/api/{video_id}/suggest-known",
+            post(suggest::suggest_known),
+        )
         .route(
             "/{video_id}/sentences/{sentence_id}/audio",
             get(api::sentence_audio),

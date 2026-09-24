@@ -2,6 +2,7 @@ import { html } from 'htm/preact';
 import { useEffect, useState } from 'preact/hooks';
 import { fetchPrimer } from '../../api.js';
 import { ComprehensionPanel } from '../mining/comprehension-panel.js';
+import { SuggestKnown } from '../mining/suggest-known.js';
 import { DifficultyChart } from '../primer/difficulty-chart.js';
 import { send } from './host.js';
 
@@ -28,6 +29,7 @@ export function SidebarStats({ job, videoId }) {
   return html`
     <div class="sidebar-stats">
       <${ComprehensionPanel} sentences=${job.sentences} partial=${!job.is_terminal} />
+      ${ready && html`<${SuggestKnown} videoId=${videoId} />`}
       ${primer && html`
         <${DifficultyChart}
           words=${primer.words}

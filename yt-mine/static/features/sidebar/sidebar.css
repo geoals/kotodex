@@ -126,3 +126,7 @@ button.timestamp.seek:hover {
   color: var(--text);
   background: var(--accent-dim);
 }
+
+.sidebar-stats .suggest-known {
+  margin-top: 0;
+}

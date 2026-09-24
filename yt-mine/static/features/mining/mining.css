@@ -545,3 +545,125 @@ a.timestamp:hover {
   0% { outline-color: var(--accent); }
   100% { outline-color: transparent; }
 }
+
+/* --- Words the model thinks are known --- */
+
+.suggest-known {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+  font-size: 0.8rem;
+}
+
+.suggest-known.review {
+  flex-direction: column;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  padding: 0.4rem;
+}
+
+.suggest-known button.quiet {
+  padding: 0.25rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 400;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.suggest-known button.quiet:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.suggest-note {
+  color: var(--text-muted);
+}
+
+.suggest-list {
+  list-style: none;
+  max-height: 50vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.suggest-list li {
+  padding: 0.35rem 0.4rem;
+  border-radius: var(--radius);
+}
+
+.suggest-list li:hover {
+  background: var(--bg-hover);
+}
+
+.suggest-list li.off .suggest-word,
+.suggest-list li.off .suggest-line {
+  opacity: 0.4;
+}
+
+.suggest-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.suggest-word {
+  font-family: "Noto Sans JP", sans-serif;
+  font-size: 1rem;
+}
+
+.suggest-reading,
+.suggest-count {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.suggest-why {
+  padding: 0 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.suggest-head .segmented {
+  margin-left: auto;
+}
+
+.suggest-head .segmented button {
+  padding: 0.1rem 0.55rem;
+  font-size: 0.75rem;
+}
+
+.suggest-line {
+  font-family: "Noto Sans JP", sans-serif;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.suggest-line b {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.suggest-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.4rem 0.2rem 0.1rem;
+}
+
+.suggest-actions .suggest-note {
+  margin-right: auto;
+}
+
+.suggest-actions button:not(.quiet) {
+  padding: 0.3rem 0.9rem;
+  font-size: 0.8rem;
+}

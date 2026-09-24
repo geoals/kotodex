@@ -82,3 +82,8 @@ export async function translateText(text) {
   const body = await res.json();
   return body.translation;
 }
+
+export async function suggestKnown(videoId) {
+  const res = await request(`${BASE}/${videoId}/suggest-known`, { method: 'POST' });
+  return res.json();
+}

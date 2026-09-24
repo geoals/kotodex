@@ -5,6 +5,7 @@ import { JobStatus } from './job-status.js';
 import { SentenceList } from './sentence-list.js';
 import { FilterBar } from './filter-bar.js';
 import { ComprehensionPanel } from './comprehension-panel.js';
+import { SuggestKnown } from './suggest-known.js';
 import { visible } from './view.js';
 import { Tabs } from '../../tabs.js';
 
@@ -54,6 +55,7 @@ export function VideoPage({ videoId, at }) {
     />
     ${job.sentences?.length > 0 && html`
       <${ComprehensionPanel} sentences=${job.sentences} partial=${!job.is_terminal} />
+      ${isDone && html`<${SuggestKnown} videoId=${videoId} />`}
       <${FilterBar} sentences=${job.sentences} filter=${filter} onFilter=${setFilter} />
     `}
     <${SentenceList}
