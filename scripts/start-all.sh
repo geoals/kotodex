@@ -247,7 +247,8 @@ start_whisper() {
   fi
 
   info "starting whisper-service ($WHISPER_FLAVOR) via docker compose"
-  docker compose -f "$WHISPER_COMPOSE" up -d
+  # --build so a change to main.py is picked up; unchanged, it is a cache hit.
+  docker compose -f "$WHISPER_COMPOSE" up -d --build
   # First run builds the image and downloads the model; be generous.
   wait_for_port "whisper-service" "$PORT_whisper" 300 || \
     warn "follow progress with: docker logs -f whisper-service"
