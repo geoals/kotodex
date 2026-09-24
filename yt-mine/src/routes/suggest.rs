@@ -30,7 +30,7 @@ they have not marked. Reads visual novels in Japanese and follows native YouTube
 and interview videos without subtitles.
 
 You get the unmarked words from one video. Each line is: number, word, reading, times \
-said, frequency rank (lower is commoner; - is unranked), and one line where it is said.
+said, and one line where it is said.
 
 Pick the words this learner almost certainly knows. Give each one reason:
 - loanword: a katakana loanword whose source word is obvious
@@ -82,11 +82,8 @@ pub async fn suggest_known(
         .iter()
         .enumerate()
         .map(|(i, w)| {
-            let rank = w["freq_rank"]
-                .as_i64()
-                .map_or_else(|| "-".to_string(), |r| r.to_string());
             format!(
-                "{i}\t{}\t{}\t×{}\t{rank}\t{}",
+                "{i}\t{}\t{}\t×{}\t{}",
                 w["headword"].as_str().unwrap_or_default(),
                 w["reading"].as_str().unwrap_or_default(),
                 w["count"],
@@ -132,7 +129,6 @@ pub async fn suggest_known(
                 "headword": w["headword"],
                 "reading": w["reading"],
                 "count": w["count"],
-                "freq_rank": w["freq_rank"],
                 "why": why,
                 "first": w["first"],
             })
