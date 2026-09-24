@@ -19,7 +19,9 @@ function axisLabel(value, series) {
   return series === 'firsts' ? String(value) : `${Math.round(value * 100)}%`;
 }
 
-export function DifficultyChart({ words, minutes, series, onSeries, onPick }) {
+// `width` and `height` are the viewBox, which the plot is stretched to fill:
+// a narrow surface passes a narrow box, or the tick labels shrink with it.
+export function DifficultyChart({ words, minutes, series, onSeries, onPick, width = W, height = H }) {
   const marks = judged.value;
   const [hover, setHover] = useState(null);
 
@@ -28,8 +30,8 @@ export function DifficultyChart({ words, minutes, series, onSeries, onPick }) {
 
   const top = niceCeiling(Math.max(...buckets.map((b) => seriesValue(b, series))), series);
   const lastMinute = buckets[buckets.length - 1].minute;
-  const plotW = W - PAD_L - PAD_R;
-  const plotH = H - PAD_T - PAD_B;
+  const plotW = width - PAD_L - PAD_R;
+  const plotH = height - PAD_T - PAD_B;
 
   const x = (minute) => PAD_L + (minute / lastMinute) * plotW;
   const y = (value) => PAD_T + plotH - (value / top) * plotH;
@@ -67,7 +69,7 @@ export function DifficultyChart({ words, minutes, series, onSeries, onPick }) {
 
       <svg
         class="difficulty-plot"
-        viewBox="0 0 ${W} ${H}"
+        viewBox="0 0 ${width} ${height}"
         preserveAspectRatio="none"
         role="img"
         aria-label=${`Difficulty across the video, by ${series === 'firsts' ? 'new words' : 'unknown share'} per minute`}
@@ -80,7 +82,7 @@ export function DifficultyChart({ words, minutes, series, onSeries, onPick }) {
               <line
                 class="difficulty-grid"
                 x1=${PAD_L}
-                x2=${W - PAD_R}
+                x2=${width - PAD_R}
                 y1=${y(value)}
                 y2=${y(value)}
               />
@@ -129,8 +131,8 @@ export function DifficultyChart({ words, minutes, series, onSeries, onPick }) {
           `,
         )}
 
-        <text class="difficulty-tick" x=${PAD_L} y=${H - 5}>0m</text>
-        <text class="difficulty-tick" x=${W - PAD_R} y=${H - 5} text-anchor="end">
+        <text class="difficulty-tick" x=${PAD_L} y=${height - 5}>0m</text>
+        <text class="difficulty-tick" x=${width - PAD_R} y=${height - 5} text-anchor="end">
           ${`${lastMinute}m`}
         </text>
       </svg>

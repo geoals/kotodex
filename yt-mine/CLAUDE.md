@@ -193,6 +193,12 @@ play.** Scrolling the list is the reader looking back, and snapping away from
 that would lose their place; a seek or play is them going back to the video.
 The list never moves while the popup is open.
 
+**The transcript page's tiles and the primer's curve sit above the list**
+(`sidebar/stats.js`), behind a Stats toggle, since the header is sticky and
+every line they take is one fewer transcript line. Clicking the curve seeks the
+video to that minute. The curve waits for the transcript to finish: the primer
+is rebuilt whenever the sentence count moves.
+
 ## Tokenization & Dictionary
 
 Provided by `jp-core` crate. See `jp-core/` for details.

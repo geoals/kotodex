@@ -11,11 +11,31 @@ import { send } from './host.js';
 import { useActiveSentence, useFollow } from './follow.js';
 import { replay, useYoutubePlayback } from './playback.js';
 import { useKeys } from './keys.js';
+import { SidebarStats } from './stats.js';
+
+const STATS_KEY = 'yt-mine.sidebar.stats';
+
+function storedStats() {
+  try {
+    return localStorage.getItem(STATS_KEY) !== 'hidden';
+  } catch {
+    return true;
+  }
+}
 
 export function SidebarPage({ videoId }) {
   const { job, error, missing, reload } = useJob(videoId);
   const [filter, setFilter] = useState('all');
   const kept = useRef(null);
+  const [showStats, setShowStats] = useState(storedStats);
+
+  function toggleStats() {
+    const next = !showStats;
+    setShowStats(next);
+    try {
+      localStorage.setItem(STATS_KEY, next ? 'shown' : 'hidden');
+    } catch {}
+  }
 
   useYoutubePlayback();
   useEffect(() => send('ready'), []);
@@ -48,9 +68,11 @@ export function SidebarPage({ videoId }) {
     <div class="yt-sidebar">
       <header>
         ${head}
+        ${showStats && job?.sentences?.length > 0 && html`<${SidebarStats} job=${job} videoId=${videoId} />`}
         ${job?.sentences?.length > 0 && html`
           <div class="sidebar-bar">
             <${FilterBar} sentences=${job.sentences} filter=${filter} onFilter=${setFilter} />
+            <button class="stats-toggle${showStats ? ' on' : ''}" onClick=${toggleStats} title="Show or hide the coverage figures and the difficulty curve">Stats</button>
             <a href=${`/${videoId}/primer`} target="_blank" title="Words to learn before watching">Primer ↗</a>
           </div>
         `}
