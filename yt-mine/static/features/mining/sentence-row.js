@@ -5,8 +5,6 @@ import { markStatus, mineWord } from './actions.js';
 import { judgeWords } from '../../api.js';
 import { key, notKnown, statusOf } from './ledger.js';
 
-let lastSide = -Infinity;
-
 export function SentenceRow({ sentence, videoId, jobId, active, onSeek }) {
   const exported = exportedIds.value;
   const audio = audioState.value;
@@ -37,10 +35,9 @@ export function SentenceRow({ sentence, videoId, jobId, active, onSeek }) {
   }
 
   // The side buttons act on the word under the pointer without a popup, as the
-  // overlay's do. Back is 3 and forward 4. Browsers differ in which of
-  // `pointerup`, `mouseup` and `auxclick` they send for these buttons, so all
-  // three are heard and the first one of a press acts. Both buttons navigate
-  // the frame, so the default has to go on the down events too.
+  // overlay's do, on `mouseup` because Firefox sends no `auxclick` for them.
+  // Back is 3 and forward 4; both navigate the frame, so the
+  // default has to go on `mousedown`, where that navigation is armed.
   const SIDE_ACTIONS = {
     3: (tok) => markStatus(tok.base_form, tok.reading, statusOf(tok, marks) === 'known' ? 'unknown' : 'known'),
     4: (tok) => mineWord(jobId, sentence.id, tok.base_form, tok.reading),
@@ -52,8 +49,6 @@ export function SentenceRow({ sentence, videoId, jobId, active, onSeek }) {
     const action = SIDE_ACTIONS[e.button];
     if (!action || isExported) return;
     e.preventDefault();
-    if (e.timeStamp - lastSide < 300) return;
-    lastSide = e.timeStamp;
     action(tok);
   }
 
@@ -110,10 +105,7 @@ export function SentenceRow({ sentence, videoId, jobId, active, onSeek }) {
               class=${cls}
               onClick=${(e) => open(tok, e)}
               onMouseDown=${sideDown}
-              onPointerDown=${sideDown}
               onMouseUp=${(e) => sideClick(tok, e)}
-              onPointerUp=${(e) => sideClick(tok, e)}
-              onAuxClick=${(e) => sideClick(tok, e)}
               onWheel=${(e) => wheel(e, e.currentTarget)}
             >${tok.surface}</span>
           `;
