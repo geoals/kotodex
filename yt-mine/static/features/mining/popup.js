@@ -3,8 +3,7 @@
 // The popup itself is `web-shared/popup.js`, the same module the VN overlay
 // loads — so a word looked up over a game and a word looked up in a transcript
 // are the same popup, down to the per-dictionary styling. What is here is what
-// is about *this* surface: an ordinary scrolling page, no side mouse buttons,
-// and a ＋ that has a video and a timestamp to attach rather than a live
+// is about *this* surface: an ordinary scrolling page, and a ＋ that has a video and a timestamp to attach rather than a live
 // screen to capture.
 //
 // It lives outside the Preact tree and is driven imperatively, because the

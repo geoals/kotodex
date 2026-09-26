@@ -1,6 +1,7 @@
 import { html } from 'htm/preact';
 import { exportedIds, audioState, judged } from './state.js';
 import { toggle, wheel } from './popup.js';
+import { markStatus, mineWord } from './actions.js';
 import { judgeWords } from '../../api.js';
 import { key, notKnown, statusOf } from './ledger.js';
 
@@ -31,6 +32,23 @@ export function SentenceRow({ sentence, videoId, jobId, active, onSeek }) {
       },
       { videoId, jobId, sentenceId: sentence.id, text: sentence.text },
     );
+  }
+
+  // The side buttons act on the word under the pointer without a popup, as the
+  // overlay's do. Back is 3 and forward 4; both navigate the frame, so the
+  // default has to go on `mousedown`, where that navigation is armed.
+  const SIDE_ACTIONS = {
+    3: (tok) => markStatus(tok.base_form, tok.reading, statusOf(tok, marks) === 'known' ? 'unknown' : 'known'),
+    4: (tok) => mineWord(jobId, sentence.id, tok.base_form, tok.reading),
+  };
+  function sideDown(e) {
+    if (SIDE_ACTIONS[e.button]) e.preventDefault();
+  }
+  function sideClick(tok, e) {
+    const action = SIDE_ACTIONS[e.button];
+    if (!action || isExported) return;
+    e.preventDefault();
+    action(tok);
   }
 
   // Most of a line is already known, and the two words that are not are the
@@ -85,6 +103,8 @@ export function SentenceRow({ sentence, videoId, jobId, active, onSeek }) {
             <span
               class=${cls}
               onClick=${(e) => open(tok, e)}
+              onMouseDown=${sideDown}
+              onAuxClick=${(e) => sideClick(tok, e)}
               onWheel=${(e) => wheel(e, e.currentTarget)}
             >${tok.surface}</span>
           `;
