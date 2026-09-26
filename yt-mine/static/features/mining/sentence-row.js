@@ -35,8 +35,7 @@ export function SentenceRow({ sentence, videoId, jobId, active, onSeek }) {
   }
 
   // The side buttons act on the word under the pointer without a popup, as the
-  // overlay's do, on `mouseup` because Firefox sends no `auxclick` for them.
-  // Back is 3 and forward 4; both navigate the frame, so the
+  // overlay's do. Back is 3 and forward 4; both navigate the frame, so the
   // default has to go on `mousedown`, where that navigation is armed.
   const SIDE_ACTIONS = {
     3: (tok) => markStatus(tok.base_form, tok.reading, statusOf(tok, marks) === 'known' ? 'unknown' : 'known'),
@@ -105,7 +104,7 @@ export function SentenceRow({ sentence, videoId, jobId, active, onSeek }) {
               class=${cls}
               onClick=${(e) => open(tok, e)}
               onMouseDown=${sideDown}
-              onMouseUp=${(e) => sideClick(tok, e)}
+              onAuxClick=${(e) => sideClick(tok, e)}
               onWheel=${(e) => wheel(e, e.currentTarget)}
             >${tok.surface}</span>
           `;
