@@ -134,9 +134,11 @@ impl TagLine {
         };
 
         // Both `·` and whitespace separate tokens: the axis separator is what
-        // goes missing, and no tag contains a space.
+        // goes missing, and no tag contains a space. Some models wrap tags in
+        // brackets or bold, or list them with commas.
         let mut tokens = tags
             .split(|c: char| c == '·' || c.is_whitespace())
+            .map(|t| t.trim_matches(|c: char| matches!(c, '[' | ']' | '*' | ',' | '|')))
             .filter(|t| !t.is_empty())
             .peekable();
 
@@ -228,6 +230,13 @@ mod tests {
             round_trip("COMMON PLAIN TECHNICAL"),
             "COMMON · PLAIN · TECHNICAL"
         );
+    }
+
+    #[test]
+    fn brackets_and_bold_around_tags_are_dropped() {
+        assert_eq!(round_trip("[COMMON · PLAIN]"), "COMMON · PLAIN");
+        assert_eq!(round_trip("[COMMON] [FORMAL]"), "COMMON · FORMAL");
+        assert_eq!(round_trip("**COMMON, PLAIN**"), "COMMON · PLAIN");
     }
 
     #[test]
