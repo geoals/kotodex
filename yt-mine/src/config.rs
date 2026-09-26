@@ -16,7 +16,11 @@ pub struct Config {
     /// Swap every external tool — yt-dlp, whisper, ffmpeg, AnkiConnect — for a
     /// fake, so the server runs with none of them installed.
     pub fake_api: bool,
-    /// Absent means cards are exported with no gloss rather than no card.
+    /// kotodex-server's database, read for the reader's LLM setting so a
+    /// transcript card is glossed by the model the reader chose.
+    pub kotodex_db_path: String,
+    /// Used when kotodex.db names no key. Absent too means cards are exported
+    /// with no gloss rather than no card.
     pub anthropic_api_key: Option<String>,
     pub whisper_service_url: String,
     pub sudachi_dict_path: PathBuf,
@@ -62,7 +66,13 @@ impl Config {
                 .unwrap_or_else(|_| "http://127.0.0.1:8765".into()),
             media_dir: env::var("KOTODEX_MEDIA_DIR").unwrap_or_else(|_| "media".into()),
             fake_api: matches!(env::var("KOTODEX_FAKE_API").as_deref(), Ok("true" | "1"),),
-            anthropic_api_key: env::var("KOTODEX_ANTHROPIC_API_KEY").ok(),
+            kotodex_db_path: env::var("KOTODEX_SERVER_DB_PATH").unwrap_or_else(|_| {
+                let home = env::var("HOME").expect("HOME not set");
+                format!("{home}/.local/share/kotodex/kotodex.db")
+            }),
+            anthropic_api_key: env::var("KOTODEX_ANTHROPIC_API_KEY")
+                .ok()
+                .filter(|k| !k.trim().is_empty()),
             whisper_service_url: env::var("KOTODEX_WHISPER_SERVICE_URL")
                 .unwrap_or_else(|_| "http://localhost:8100".into()),
             sudachi_dict_path: env::var("KOTODEX_SUDACHI_DICT_PATH")

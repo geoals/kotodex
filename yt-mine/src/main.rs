@@ -106,10 +106,12 @@ async fn main() {
     let llm_definer: Option<Arc<dyn LlmDefiner>> = if config.fake_api {
         Some(Arc::new(FakeLlmDefiner))
     } else {
-        config.anthropic_api_key.as_ref().map(|key| {
-            info!("CompactDef enabled");
-            Arc::new(CompactDefiner::new(key.clone())) as Arc<dyn LlmDefiner>
-        })
+        let definer = CompactDefiner::new(
+            &config.kotodex_db_path,
+            config.anthropic_api_key.clone(),
+        );
+        info!("CompactDef enabled");
+        Some(Arc::new(definer) as Arc<dyn LlmDefiner>)
     };
 
     let translator = config.translate.api_key.as_ref().map(|key| {
