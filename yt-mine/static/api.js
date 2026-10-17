@@ -87,3 +87,12 @@ export async function suggestKnown(videoId) {
   const res = await request(`${BASE}/${videoId}/suggest-known`, { method: 'POST' });
   return res.json();
 }
+
+export async function submitLocal(video, subtitles) {
+  const res = await request(`${BASE}/jobs/local`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ video, subtitles: subtitles || null }),
+  });
+  return res.json();
+}

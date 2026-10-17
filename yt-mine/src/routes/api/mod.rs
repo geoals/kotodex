@@ -151,7 +151,6 @@ pub struct ExportSentenceRequest {
     #[serde(default)]
     target_word: Option<String>,
     /// The ledger reading for `target_word`, as the popup had it.
-    ///
     /// Sent rather than re-derived, because a word picked out of the popup's
     /// scan need not be a token at all: 経年劣化 is a compound the tokenizer
     /// split, so looking its reading up among the tokens finds nothing and the
@@ -208,6 +207,100 @@ pub async fn submit_job(
     });
 
     Ok((StatusCode::CREATED, Json(SubmitResponse { video_id, at })).into_response())
+}
+
+#[derive(Deserialize)]
+pub struct SubmitLocalRequest {
+    video: String,
+    #[serde(default)]
+    subtitles: Option<String>,
+}
+
+pub async fn submit_local(
+    State(state): State<AppState>,
+    Json(body): Json<SubmitLocalRequest>,
+) -> Result<Response, AppError> {
+    use crate::models::JobStatus;
+
+    let video = expand_home(body.video.trim());
+    if !tokio::fs::try_exists(&video).await.unwrap_or(false) {
+        return Err(AppError::BadRequest(format!("No video file at {video}")));
+    }
+    let lines = local_lines(&video, body.subtitles.as_deref()).await?;
+
+    let video_id = local_video_id(&video);
+    if db::get_job_by_video_id(&state.db, &video_id).await?.is_some() {
+        return Ok(Json(SubmitResponse { video_id, at: None }).into_response());
+    }
+
+    let title = std::path::Path::new(&video)
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_else(|| video.clone());
+    let duration = lines.last().map(|l| l.end);
+
+    let job_id = db::create_job(&state.db, &video, &video_id).await?;
+    db::update_job_audio(&state.db, job_id, &video, &video, &title, duration).await?;
+    db::update_job_video(&state.db, job_id, &video).await?;
+    db::insert_sentences(&state.db, job_id, &lines).await?;
+    db::update_job_status(&state.db, job_id, &JobStatus::Done, None).await?;
+
+    Ok((StatusCode::CREATED, Json(SubmitResponse { video_id, at: None })).into_response())
+}
+
+/// A named subtitle file, else one beside the video, else the Japanese track
+/// inside it.
+async fn local_lines(
+    video: &str,
+    named: Option<&str>,
+) -> Result<Vec<crate::models::TranscriptSegment>, AppError> {
+    use crate::services::subtitles;
+
+    let file = match named.map(str::trim) {
+        Some(s) if !s.is_empty() => Some(expand_home(s)),
+        _ => sibling_subtitles(video).await,
+    };
+    let (name, content) = match file {
+        Some(path) => {
+            let bytes = tokio::fs::read(&path)
+                .await
+                .map_err(|e| AppError::BadRequest(format!("Cannot read {path}: {e}")))?;
+            (path, String::from_utf8_lossy(&bytes).into_owned())
+        }
+        None => {
+            let (ext, content) = subtitles::extract_embedded(video).await.ok_or_else(|| {
+                AppError::BadRequest("No Japanese subtitles beside or inside the video".into())
+            })?;
+            (format!("embedded.{ext}"), content)
+        }
+    };
+    subtitles::parse(&name, &content).map_err(|e| AppError::BadRequest(e.to_string()))
+}
+
+fn expand_home(path: &str) -> String {
+    match (path.strip_prefix("~/"), std::env::var("HOME")) {
+        (Some(rest), Ok(home)) => format!("{home}/{rest}"),
+        _ => path.to_string(),
+    }
+}
+
+async fn sibling_subtitles(video: &str) -> Option<String> {
+    let stem = std::path::Path::new(video).with_extension("");
+    let stem = stem.to_string_lossy();
+    for suffix in [".ja.srt", ".jp.srt", ".srt", ".ja.ass", ".jp.ass", ".ass", ".ssa"] {
+        let candidate = format!("{stem}{suffix}");
+        if tokio::fs::try_exists(&candidate).await.unwrap_or(false) {
+            return Some(candidate);
+        }
+    }
+    None
+}
+
+fn local_video_id(path: &str) -> String {
+    let hash = path.bytes().fold(0xcbf29ce484222325u64, |h, b| {
+        (h ^ b as u64).wrapping_mul(0x100000001b3)
+    });
+    format!("local-{hash:016x}")
 }
 
 /// The playback position YouTube writes into a shared link: `t=90`, `t=1m30s`,
@@ -326,7 +419,6 @@ pub async fn poll_status(
 }
 
 /// `GET /api/define?term=<headword>&reading=<reading>`
-///
 /// The overlay's own popup endpoint, minus the lookup recording: a lookup is a
 /// reading-session event and there is no session here.
 pub async fn define(
@@ -350,7 +442,6 @@ pub async fn expand(
 }
 
 /// `GET /api/mined?term=<term>` — is this word already a card?
-///
 /// Asked of Anki rather than of `anki_notes`: that table is a snapshot taken on
 /// demand, and the case that matters is a card made seconds ago. It is the same
 /// duplicate check Yomitan runs before offering to add, so the popup's badge
@@ -383,7 +474,6 @@ pub async fn browse(
 }
 
 /// `POST /api/judge` — mark a word known or unknown, in the shared ledger.
-///
 /// The same write `#read`'s tap makes, against the same rows: a word judged
 /// while mining a video is judged, and the reading view stops marking it.
 pub async fn judge(
@@ -397,7 +487,6 @@ pub async fn judge(
 }
 
 /// `POST /api/judge/many` — the same write, for every word in a line at once.
-///
 /// A transcript line is read whole, and most of its words are already known;
 /// the ones worth a card are the two that are not. Judging them one popup at a
 /// time is the work this exists to skip.

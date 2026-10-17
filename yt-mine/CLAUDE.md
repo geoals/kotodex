@@ -53,6 +53,18 @@ A pasted link still carries its timestamp: YouTube's "Copy link at current
 time" writes `t=`, `start_seconds_in` reads it, and the page scrolls to that
 line as soon as transcription reaches it.
 
+## Local episodes
+
+`POST /api/jobs/local` (the home page's second form) takes a video on disk and
+its subtitles: a named `.srt`/`.ass`, else one beside the video with the same
+name, else the Japanese track inside it (`services::subtitles`). The subtitles
+are the transcript, so nothing is downloaded or transcribed and the job is done
+when the request returns. Each cue is one line with its own timing, since
+subtitle timing is made by hand to the speech. Hearing-impaired markup
+(`（安芸）`, sound cues, furigana) and ♪ lines are dropped. The video is both
+media files: the clip and the screenshot are cut from it. The id is
+`local-` plus a hash of the path, so the same file opens the same page.
+
 ## Key design decisions
 
 - **The tokenizer is `jp_core::highlight`'s, all seven inputs** — the same

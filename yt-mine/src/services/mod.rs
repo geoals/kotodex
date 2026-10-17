@@ -4,4 +4,5 @@ pub mod fake;
 pub mod llm;
 pub mod media;
 pub mod pipeline;
+pub mod subtitles;
 pub mod transcribe;

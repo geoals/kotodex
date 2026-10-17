@@ -667,3 +667,7 @@ a.timestamp:hover {
   padding: 0.3rem 0.9rem;
   font-size: 0.8rem;
 }
+
+.local-form input + input {
+  margin-top: 0.5rem;
+}

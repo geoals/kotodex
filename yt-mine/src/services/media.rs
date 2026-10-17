@@ -66,6 +66,9 @@ impl MediaExtractor for FfmpegMediaExtractor {
                     &video_path,
                     "-vframes",
                     "1",
+                    // A card holds a still, not a 1080p frame.
+                    "-vf",
+                    "scale=-2:'min(480,ih)'",
                     "-q:v",
                     "2",
                     &output_path,
@@ -112,6 +115,9 @@ impl MediaExtractor for FfmpegMediaExtractor {
                     &start,
                     "-i",
                     &audio_path,
+                    // A file with a commentary track must not have it picked.
+                    "-map",
+                    "0:a:0",
                     "-t",
                     &duration_str,
                     "-vn",
