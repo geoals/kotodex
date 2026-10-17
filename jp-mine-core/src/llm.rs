@@ -143,7 +143,7 @@ impl Provider {
                 json!({
                     "model": model,
                     "max_tokens": ask.max_tokens,
-                    "thinking": { "type": "disabled" },
+                    "thinking": { "type": thinking_off(&model) },
                     "output_config": { "effort": "medium" },
                     "stream": stream,
                     "system": system,
@@ -382,6 +382,16 @@ fn frame(kind: Kind, line: &[u8]) -> Option<Frame> {
     })
 }
 
+/// How a model is told not to think. Sonnet 5.5 rejects `disabled` and every
+/// other Claude model rejects `between_tools`, so the name decides it.
+fn thinking_off(model: &str) -> &'static str {
+    if model.starts_with("claude-sonnet-5-5") {
+        "between_tools"
+    } else {
+        "disabled"
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -548,3 +558,4 @@ mod tests {
         assert_eq!(Kind::parse("gemini"), None);
     }
 }
+

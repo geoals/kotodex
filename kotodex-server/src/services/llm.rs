@@ -46,7 +46,7 @@ bullet list with one-line bullets — but nothing heavier."
 /// therefore come off a different model than `compactdef`'s, which is why the
 /// rubric is shared source and not a paraphrase: the wording is the only thing
 /// holding the two axes together.
-const MODEL: &str = "claude-sonnet-5";
+const MODEL: &str = "claude-sonnet-5-5";
 
 /// The cap is a cost bound, not a target: an answer this prompt asks to be "very
 /// concise" runs well under it, and hitting it truncates mid-sentence.
