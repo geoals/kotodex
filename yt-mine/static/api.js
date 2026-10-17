@@ -88,11 +88,17 @@ export async function suggestKnown(videoId) {
   return res.json();
 }
 
-export async function submitLocal(video, subtitles) {
+export async function submitLocal(video) {
   const res = await request(`${BASE}/jobs/local`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ video, subtitles: subtitles || null }),
+    body: JSON.stringify({ video }),
   });
   return res.json();
+}
+
+// null when the dialog was cancelled.
+export async function pickLocal() {
+  const res = await request(`${BASE}/local/pick`, { method: 'POST' });
+  return res.status === 204 ? null : res.json();
 }

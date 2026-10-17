@@ -203,45 +203,102 @@ fn is_kana(c: char) -> bool {
     matches!(c, '\u{3040}'..='\u{30FF}')
 }
 
-/// The first Japanese text subtitle track inside a video, as `(extension,
-/// content)` so [`parse`] can read it. `None` when the file has none.
-pub async fn extract_embedded(video: &str) -> Option<(&'static str, String)> {
+/// Where a video's Japanese subtitles are.
+#[derive(Debug, Clone)]
+pub enum Source {
+    File(String),
+    Embedded {
+        track: usize,
+        format: &'static str,
+        title: Option<String>,
+    },
+}
+
+impl Source {
+    pub fn describe(&self) -> String {
+        match self {
+            Source::File(path) => std::path::Path::new(path)
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_else(|| path.clone()),
+            Source::Embedded { title, .. } => match title {
+                Some(t) => format!("track inside the video: {t}"),
+                None => "track inside the video".into(),
+            },
+        }
+    }
+}
+
+/// A file beside the video with its name comes first, since one put there by
+/// hand is the one meant over whatever the release embedded.
+pub async fn find(video: &str) -> Option<Source> {
+    match sibling(video).await {
+        Some(path) => Some(Source::File(path)),
+        None => embedded(video).await,
+    }
+}
+
+pub async fn read(video: &str, source: &Source) -> Result<Vec<TranscriptSegment>, String> {
+    match source {
+        Source::File(path) => {
+            let bytes = tokio::fs::read(path)
+                .await
+                .map_err(|e| format!("Cannot read {path}: {e}"))?;
+            parse(path, &String::from_utf8_lossy(&bytes)).map_err(|e| e.to_string())
+        }
+        Source::Embedded { track, format, .. } => {
+            let out = tokio::process::Command::new("ffmpeg")
+                .args(["-v", "error", "-i", video, "-map"])
+                .arg(format!("0:s:{track}"))
+                .args(["-f", format, "-"])
+                .output()
+                .await
+                .map_err(|e| format!("failed to run ffmpeg: {e}"))?;
+            if !out.status.success() {
+                return Err("Cannot read the subtitle track".into());
+            }
+            parse(&format!("embedded.{format}"), &String::from_utf8_lossy(&out.stdout))
+                .map_err(|e| e.to_string())
+        }
+    }
+}
+
+/// `ep01.mkv` → `ep01.ja.srt`, `ep01.srt`, `ep01.ass`, …
+async fn sibling(video: &str) -> Option<String> {
+    let stem = std::path::Path::new(video).with_extension("");
+    let stem = stem.to_string_lossy();
+    for suffix in [".ja.srt", ".jp.srt", ".srt", ".ja.ass", ".jp.ass", ".ass", ".ssa"] {
+        let candidate = format!("{stem}{suffix}");
+        if tokio::fs::try_exists(&candidate).await.unwrap_or(false) {
+            return Some(candidate);
+        }
+    }
+    None
+}
+
+async fn embedded(video: &str) -> Option<Source> {
     let probe = tokio::process::Command::new("ffprobe")
-        .args([
-            "-v",
-            "error",
-            "-select_streams",
-            "s",
-            "-show_entries",
-            "stream=codec_name:stream_tags=language",
-            "-of",
-            "csv=p=0",
-            video,
-        ])
+        .args(["-v", "error", "-select_streams", "s", "-show_entries"])
+        .args(["stream=codec_name:stream_tags=language,title", "-of", "json", video])
         .output()
         .await
         .ok()?;
-    let listing = String::from_utf8_lossy(&probe.stdout);
-    let (track, format) = listing.lines().enumerate().find_map(|(i, line)| {
-        let (codec, lang) = line.split_once(',')?;
-        let format = match codec {
+    let listing: serde_json::Value = serde_json::from_slice(&probe.stdout).ok()?;
+    let streams = listing["streams"].as_array()?;
+    streams.iter().enumerate().find_map(|(track, s)| {
+        let format = match s["codec_name"].as_str()? {
             "ass" | "ssa" => "ass",
             "subrip" | "mov_text" | "webvtt" | "text" => "srt",
             _ => return None,
         };
-        matches!(lang.trim(), "jpn" | "ja" | "jp").then_some((i, format))
-    })?;
-
-    let out = tokio::process::Command::new("ffmpeg")
-        .args(["-v", "error", "-i", video, "-map"])
-        .arg(format!("0:s:{track}"))
-        .args(["-f", format, "-"])
-        .output()
-        .await
-        .ok()?;
-    out.status
-        .success()
-        .then(|| (format, String::from_utf8_lossy(&out.stdout).into_owned()))
+        let tags = &s["tags"];
+        let lang = tags["language"].as_str()?;
+        matches!(lang, "jpn" | "ja" | "jp").then(|| Source::Embedded {
+            track,
+            format,
+            title: tags["title"].as_str().map(str::to_string),
+        })
+    })
 }
 
 /// One line shown across several back-to-back cues is one line. Typesetters

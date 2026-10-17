@@ -668,6 +668,20 @@ a.timestamp:hover {
   font-size: 0.8rem;
 }
 
-.local-form input + input {
-  margin-top: 0.5rem;
+.local-pick {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.local-name {
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.local-pick button {
+  background: var(--bg-surface);
+  color: var(--text);
+  border: 1px solid var(--border);
 }

@@ -64,6 +64,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/", get(spa_shell))
         .route("/api/jobs", post(api::submit_job))
         .route("/api/jobs/local", post(api::submit_local))
+        .route("/api/local/pick", post(api::pick_local))
         .route("/api/videos", get(api::list_videos))
         .route("/api/{video_id}", get(api::get_job))
         .route("/api/{video_id}/status", get(api::poll_status))

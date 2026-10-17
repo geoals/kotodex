@@ -209,34 +209,72 @@ pub async fn submit_job(
     Ok((StatusCode::CREATED, Json(SubmitResponse { video_id, at })).into_response())
 }
 
-#[derive(Deserialize)]
-pub struct SubmitLocalRequest {
-    video: String,
-    #[serde(default)]
+#[derive(Serialize)]
+pub struct PickedVideo {
+    path: String,
+    name: String,
+    /// What the subtitles will be read from, or `None` when whisper will
+    /// transcribe the video instead.
     subtitles: Option<String>,
 }
 
+/// `POST /api/local/pick` — opens the desktop's file dialog. 204 when it is
+/// cancelled.
+pub async fn pick_local(State(_): State<AppState>) -> Result<Response, AppError> {
+    use crate::services::{local, subtitles};
+
+    let Some(path) = local::pick_video().await.map_err(AppError::Upstream)? else {
+        return Ok(StatusCode::NO_CONTENT.into_response());
+    };
+    let subtitles = subtitles::find(&path).await.map(|s| s.describe());
+    Ok(Json(PickedVideo {
+        name: local::title(&path),
+        path,
+        subtitles,
+    })
+    .into_response())
+}
+
+#[derive(Deserialize)]
+pub struct SubmitLocalRequest {
+    video: String,
+}
+
+/// `POST /api/jobs/local` — a video on disk. With subtitles the job is done in
+/// the request, since they are the transcript; without, it goes through
+/// whisper exactly as a YouTube video does.
 pub async fn submit_local(
     State(state): State<AppState>,
     Json(body): Json<SubmitLocalRequest>,
 ) -> Result<Response, AppError> {
     use crate::models::JobStatus;
+    use crate::services::{local, subtitles};
 
-    let video = expand_home(body.video.trim());
+    let video = body.video;
     if !tokio::fs::try_exists(&video).await.unwrap_or(false) {
         return Err(AppError::BadRequest(format!("No video file at {video}")));
     }
-    let lines = local_lines(&video, body.subtitles.as_deref()).await?;
-
-    let video_id = local_video_id(&video);
+    let video_id = local::local_video_id(&video);
     if db::get_job_by_video_id(&state.db, &video_id).await?.is_some() {
         return Ok(Json(SubmitResponse { video_id, at: None }).into_response());
     }
 
-    let title = std::path::Path::new(&video)
-        .file_stem()
-        .map(|s| s.to_string_lossy().into_owned())
-        .unwrap_or_else(|| video.clone());
+    let Some(source) = subtitles::find(&video).await else {
+        let job_id = db::create_job(&state.db, &video, &video_id).await?;
+        let pool = state.db.clone();
+        let transcriber = Arc::clone(&state.transcriber);
+        let audio_dir = state.audio_dir.clone();
+        tokio::spawn(async move {
+            pipeline::process_job(pool, job_id, video, audio_dir, Arc::new(local::LocalFile), transcriber)
+                .await;
+        });
+        return Ok((StatusCode::CREATED, Json(SubmitResponse { video_id, at: None })).into_response());
+    };
+
+    let lines = subtitles::read(&video, &source)
+        .await
+        .map_err(AppError::BadRequest)?;
+    let title = local::title(&video);
     let duration = lines.last().map(|l| l.end);
 
     let job_id = db::create_job(&state.db, &video, &video_id).await?;
@@ -246,61 +284,6 @@ pub async fn submit_local(
     db::update_job_status(&state.db, job_id, &JobStatus::Done, None).await?;
 
     Ok((StatusCode::CREATED, Json(SubmitResponse { video_id, at: None })).into_response())
-}
-
-/// A named subtitle file, else one beside the video, else the Japanese track
-/// inside it.
-async fn local_lines(
-    video: &str,
-    named: Option<&str>,
-) -> Result<Vec<crate::models::TranscriptSegment>, AppError> {
-    use crate::services::subtitles;
-
-    let file = match named.map(str::trim) {
-        Some(s) if !s.is_empty() => Some(expand_home(s)),
-        _ => sibling_subtitles(video).await,
-    };
-    let (name, content) = match file {
-        Some(path) => {
-            let bytes = tokio::fs::read(&path)
-                .await
-                .map_err(|e| AppError::BadRequest(format!("Cannot read {path}: {e}")))?;
-            (path, String::from_utf8_lossy(&bytes).into_owned())
-        }
-        None => {
-            let (ext, content) = subtitles::extract_embedded(video).await.ok_or_else(|| {
-                AppError::BadRequest("No Japanese subtitles beside or inside the video".into())
-            })?;
-            (format!("embedded.{ext}"), content)
-        }
-    };
-    subtitles::parse(&name, &content).map_err(|e| AppError::BadRequest(e.to_string()))
-}
-
-fn expand_home(path: &str) -> String {
-    match (path.strip_prefix("~/"), std::env::var("HOME")) {
-        (Some(rest), Ok(home)) => format!("{home}/{rest}"),
-        _ => path.to_string(),
-    }
-}
-
-async fn sibling_subtitles(video: &str) -> Option<String> {
-    let stem = std::path::Path::new(video).with_extension("");
-    let stem = stem.to_string_lossy();
-    for suffix in [".ja.srt", ".jp.srt", ".srt", ".ja.ass", ".jp.ass", ".ass", ".ssa"] {
-        let candidate = format!("{stem}{suffix}");
-        if tokio::fs::try_exists(&candidate).await.unwrap_or(false) {
-            return Some(candidate);
-        }
-    }
-    None
-}
-
-fn local_video_id(path: &str) -> String {
-    let hash = path.bytes().fold(0xcbf29ce484222325u64, |h, b| {
-        (h ^ b as u64).wrapping_mul(0x100000001b3)
-    });
-    format!("local-{hash:016x}")
 }
 
 /// The playback position YouTube writes into a shared link: `t=90`, `t=1m30s`,

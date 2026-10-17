@@ -53,17 +53,23 @@ A pasted link still carries its timestamp: YouTube's "Copy link at current
 time" writes `t=`, `start_seconds_in` reads it, and the page scrolls to that
 line as soon as transcription reaches it.
 
-## Local episodes
+## Local videos
 
-`POST /api/jobs/local` (the home page's second form) takes a video on disk and
-its subtitles: a named `.srt`/`.ass`, else one beside the video with the same
-name, else the Japanese track inside it (`services::subtitles`). The subtitles
-are the transcript, so nothing is downloaded or transcribed and the job is done
-when the request returns. Each cue is one line with its own timing, since
-subtitle timing is made by hand to the speech. Hearing-impaired markup
-(`（安芸）`, sound cues, furigana) and ♪ lines are dropped. The video is both
-media files: the clip and the screenshot are cut from it. The id is
-`local-` plus a hash of the path, so the same file opens the same page.
+"Choose video…" on the home page opens the desktop's own file dialog through
+`POST /api/local/pick` (zenity), because a browser file input never gives the
+page a path, and the path is what finds subtitles beside the video. The pick
+reports whether subtitles were found, before anything is submitted.
+
+`POST /api/jobs/local` reads subtitles from a file beside the video with the
+same name, else from the Japanese track inside it (`services::subtitles`).
+With subtitles, nothing is transcribed and the job is done when the request
+returns. Each cue is one line with its own timing, since subtitle timing is
+made by hand to the speech. Hearing-impaired markup (`（安芸）`, sound cues,
+furigana) and ♪ lines are dropped. Without subtitles, `services::local::LocalFile`
+stands in for yt-dlp and the job goes through whisper like a YouTube video.
+Either way the video is both media files: the clip and the screenshot are cut
+from it. The id is `local-` plus a hash of the path, so the same file opens the
+same page.
 
 ## Key design decisions
 
