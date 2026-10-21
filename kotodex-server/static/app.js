@@ -66,7 +66,7 @@ function App({ view, sub }) {
     try {
       const [s, d, w, cfg, sess, vc] = await Promise.all([
         api("/api/summary"),
-        api("/api/days?days=60"),
+        api("/api/days?days=365"),
         api("/api/works"),
         api("/api/settings"),
         api("/api/sessions"),

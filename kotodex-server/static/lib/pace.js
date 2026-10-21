@@ -29,16 +29,29 @@ function paceCharsPerDay(days, settings) {
  *  `paceCharsPerDay` uses, zero days included. This is a property of the
  *  reader — how much time you sit down for — not of any one VN, so a finish
  *  estimate multiplies it by the current work's own speed rather than by a
- *  cross-work chars/day that a faster previous VN inflated. */
+ *  cross-work chars/day that a faster previous VN inflated.
+ *
+ *  A week off would make a 200-hour VN finish years out, so when the week
+ *  falls below half the long-run mean (every complete day since
+ *  `pace_start_date`), the long-run mean is used instead. */
 
 function dailyActiveHours(days, settings) {
-  let win = days.slice(-8, -1);
-  if (settings.pace_start_date) {
-    win = win.filter((d) => d.date >= settings.pace_start_date);
-  }
+  const meanHours = (win) =>
+    win.reduce((a, d) => a + d.active_secs, 0) / 3600 / win.length;
+  const sinceStart = (win) =>
+    settings.pace_start_date
+      ? win.filter((d) => d.date >= settings.pace_start_date)
+      : win;
+
+  let win = sinceStart(days.slice(-8, -1));
   if (!win.length) win = days.slice(-1);
-  if (!win.length) return 0;
-  return win.reduce((a, d) => a + d.active_secs, 0) / 3600 / win.length;
+  if (!win.length) return { hours: 0, longRun: false };
+  const recent = meanHours(win);
+  const all = sinceStart(days.slice(0, -1));
+  const longRun = all.length > win.length ? meanHours(all) : 0;
+  return recent < longRun / 2
+    ? { hours: longRun, longRun: true, days: all.length }
+    : { hours: recent, longRun: false };
 }
 
 /** This work's own reading speed in chars/hour, or null below a 10-minute
@@ -71,7 +84,11 @@ export function workProgress(w, days, settings) {
   // a cross-work chars/day, which would let a faster previous VN pull a harder
   // current one's date earlier than it should. The cross-work pace is the
   // fallback until the work has ten minutes of its own to measure speed over.
-  const dailyHours = dailyActiveHours(days, settings);
+  const daily = dailyActiveHours(days, settings);
+  const dailyHours = daily.hours;
+  const hoursWindow = daily.longRun
+    ? `your average over the last ${daily.days} complete days, used because the last week was under half of it`
+    : `your average over ${window}`;
   const workCharsPerDay =
     workSpeed !== null && dailyHours > 0 ? workSpeed * dailyHours : null;
   const finishPace = workCharsPerDay ?? (pace > 0 ? pace : null);
@@ -80,7 +97,7 @@ export function workProgress(w, days, settings) {
       ? workCharsPerDay !== null
         ? `${fmtChars(remaining)} chars left ÷ ${fmtChars(Math.round(workCharsPerDay))} chars/day — ` +
           `this work's own ${fmtChars(Math.round(workSpeed))}/h × ${dailyHours.toFixed(1)} h/day, ` +
-          `your average over ${window} (zero days counted).${cutoff}`
+          `${hoursWindow} (zero days counted).${cutoff}`
         : `${fmtChars(remaining)} chars left ÷ ${fmtChars(Math.round(pace))} chars/day, ` +
           `your cross-work average over ${window} — this work has under 10 minutes of its own to gauge speed.${cutoff}`
       : null;
