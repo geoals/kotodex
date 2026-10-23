@@ -91,21 +91,30 @@ export function wheel(e, anchor) {
   popup.step(Math.sign(e.deltaY));
 }
 
+/** Between the popup and the line, and between the popup and the edge. */
+const GAP = 6;
+const EDGE = 8;
+
 /** Anchored in *document* coordinates, so the popup stays on its word as the
  * page scrolls rather than hanging in the viewport where the word used to be.
  *
- * Below the word where there is room and above it otherwise, so a sentence near
- * the bottom of a long list still gets a readable popup. Clamped horizontally
- * so a word at either edge cannot push it off screen. */
+ * Clear of the whole line, not just the word, since a sentence wraps. It goes
+ * on whichever side has more room and is capped at that room, so it never
+ * covers the line it came from however short the page is. Clamped
+ * horizontally so a word at either edge cannot push it off screen. */
 function place(anchor) {
   const el = element();
   const rect = anchor.getBoundingClientRect();
+  const line = (anchor.closest('.sentence-tokens') ?? anchor).getBoundingClientRect();
+  const above = line.top - GAP - EDGE;
+  const below = window.innerHeight - line.bottom - GAP - EDGE;
+  const up = above > below;
+  el.style.setProperty('--popup-max', `${Math.max(up ? above : below, 0)}px`);
   const width = el.offsetWidth;
   const height = el.offsetHeight;
   const left = rect.left + rect.width / 2 - width / 2;
-  const room = window.innerHeight - rect.bottom;
-  const top = room > height || rect.top < height ? rect.bottom + 6 : rect.top - height - 6;
-  el.style.left = `${Math.max(8, Math.min(left, window.innerWidth - width - 8)) + window.scrollX}px`;
+  const top = up ? line.top - height - GAP : line.bottom + GAP;
+  el.style.left = `${Math.max(EDGE, Math.min(left, window.innerWidth - width - EDGE)) + window.scrollX}px`;
   el.style.top = `${top + window.scrollY}px`;
 }
 
