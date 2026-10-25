@@ -53,6 +53,12 @@ function instance() {
     mine: (target) => exportOne(target),
     place,
   });
+  // Placed above the line, the box hangs from its top, so anything that grows
+  // it after `place` (an image, a chip row, the mined badge) runs down over the
+  // word. Re-placing on every resize keeps its bottom on the line.
+  new ResizeObserver(() => {
+    if (popup.isOpen() && popup.anchor()?.isConnected) place(popup.anchor());
+  }).observe(element());
   // Anywhere else dismisses. The popup stops its own clicks inside the shared
   // module, so this never has to ask where the click came from.
   document.addEventListener('click', () => close());
