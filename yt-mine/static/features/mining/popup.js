@@ -55,7 +55,7 @@ function instance() {
   });
   // Placed above the line, the box hangs from its top, so anything that grows
   // it after `place` (an image, a chip row, the mined badge) runs down over the
-  // word. Re-placing on every resize keeps its bottom on the line.
+  // word. Re-placing on every resize keeps its bottom on the word.
   new ResizeObserver(() => {
     if (popup.isOpen() && popup.anchor()?.isConnected) place(popup.anchor());
   }).observe(element());
@@ -104,22 +104,20 @@ const EDGE = 8;
 /** Anchored in *document* coordinates, so the popup stays on its word as the
  * page scrolls rather than hanging in the viewport where the word used to be.
  *
- * Clear of the whole line, not just the word, since a sentence wraps. It goes
- * on whichever side has more room and is capped at that room, so it never
- * covers the line it came from however short the page is. Clamped
- * horizontally so a word at either edge cannot push it off screen. */
+ * Directly above or below the word, on whichever side has more room, and
+ * capped at that room so it never covers the word however short the page is.
+ * Clamped horizontally so a word at either edge cannot push it off screen. */
 function place(anchor) {
   const el = element();
   const rect = anchor.getBoundingClientRect();
-  const line = (anchor.closest('.sentence-tokens') ?? anchor).getBoundingClientRect();
-  const above = line.top - GAP - EDGE;
-  const below = window.innerHeight - line.bottom - GAP - EDGE;
+  const above = rect.top - GAP - EDGE;
+  const below = window.innerHeight - rect.bottom - GAP - EDGE;
   const up = above > below;
   el.style.setProperty('--popup-max', `${Math.max(up ? above : below, 0)}px`);
   const width = el.offsetWidth;
   const height = el.offsetHeight;
   const left = rect.left + rect.width / 2 - width / 2;
-  const top = up ? line.top - height - GAP : line.bottom + GAP;
+  const top = up ? rect.top - height - GAP : rect.bottom + GAP;
   el.style.left = `${Math.max(EDGE, Math.min(left, window.innerWidth - width - EDGE)) + window.scrollX}px`;
   el.style.top = `${top + window.scrollY}px`;
 }
