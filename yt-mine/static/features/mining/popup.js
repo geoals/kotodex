@@ -53,7 +53,7 @@ function instance() {
     mine: (target) => exportOne(target),
     place,
   });
-  // Placed above the line, the box hangs from its top, so anything that grows
+  // Placed above the word, the box hangs from its top, so anything that grows
   // it after `place` (an image, a chip row, the mined badge) runs down over the
   // word. Re-placing on every resize keeps its bottom on the word.
   new ResizeObserver(() => {
@@ -97,7 +97,7 @@ export function wheel(e, anchor) {
   popup.step(Math.sign(e.deltaY));
 }
 
-/** Between the popup and the line, and between the popup and the edge. */
+/** Between the popup and the word, and between the popup and the edge. */
 const GAP = 6;
 const EDGE = 8;
 
