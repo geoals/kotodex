@@ -341,15 +341,15 @@ a.timestamp:hover {
 /* `known` is deliberately absent: the absence of a mark is what makes the
    marks readable. Hue names the status, matching kotodex-server's scale. */
 .token.content-word.mark-new {
-  background: hsl(211 40% 22%);
+  background: var(--mark-new);
 }
 
 .token.content-word.mark-seen {
-  background: hsl(276 25% 20%);
+  background: var(--mark-seen);
 }
 
 .token.content-word.mark-unknown {
-  background: hsl(28 45% 24%);
+  background: var(--mark-unknown);
 }
 
 .token.content-word.open {

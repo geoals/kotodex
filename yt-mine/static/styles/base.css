@@ -22,7 +22,39 @@
   --success-bg: hsl(170, 25%, 11%);
   --success-border: hsl(170, 25%, 20%);
   --success-text: hsl(170, 35%, 55%);
+  --mark-new: hsl(211 40% 22%);
+  --mark-seen: hsl(276 25% 20%);
+  --mark-unknown: hsl(28 45% 24%);
+  --now: hsl(175, 22%, 13%);
+  --float-shadow: 0 2px 10px hsl(0 0% 0% / 0.5);
+  --scrollbar: hsl(210, 5%, 22%);
+  --scrollbar-hover: hsl(210, 5%, 28%);
   --radius: 6px;
+}
+
+:root[data-theme="light"] {
+  --bg: hsl(60, 11%, 95%);
+  --bg-surface: hsl(213, 22%, 99%);
+  --bg-hover: hsl(52, 12%, 89%);
+  --text: hsl(0, 0%, 8%);
+  --text-muted: hsl(45, 3%, 40%);
+  --accent: hsl(175, 60%, 30%);
+  --accent-hover: hsl(175, 65%, 24%);
+  --accent-dim: hsl(175, 40%, 88%);
+  --border: hsl(52, 12%, 80%);
+  --danger-bg: hsl(0, 70%, 95%);
+  --danger-border: hsl(0, 50%, 80%);
+  --danger-text: hsl(0, 60%, 38%);
+  --success-bg: hsl(170, 40%, 93%);
+  --success-border: hsl(170, 30%, 75%);
+  --success-text: hsl(170, 60%, 25%);
+  --mark-new: hsl(211 88% 86%);
+  --mark-seen: hsl(276 62% 90%);
+  --mark-unknown: hsl(28 92% 85%);
+  --now: hsl(175, 45%, 88%);
+  --float-shadow: 0 2px 10px hsl(0 0% 0% / 0.18);
+  --scrollbar: hsl(52, 8%, 78%);
+  --scrollbar-hover: hsl(52, 8%, 68%);
 }
 
 body {
@@ -188,9 +220,9 @@ button:disabled {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: hsl(210, 5%, 22%);
+  background: var(--scrollbar);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(210, 5%, 28%);
+  background: var(--scrollbar-hover);
 }

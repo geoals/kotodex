@@ -1,10 +1,15 @@
 <!DOCTYPE html>
-<!-- Pinned dark: this app has one palette (static/styles/base.css) and no
-     theme control, while the shared popup it loads answers to the workspace
-     tokens in /shared/theme.css, which follow the machine. Without the stamp a
-     light desktop would open a white definition inside a dark app. -->
+<!-- Always stamped, dark unless the reader chose light: the page's own palette
+     (static/styles/base.css) and the shared popup's (/shared/theme.css) must
+     agree, and the popup's would otherwise follow the machine. Set before the
+     stylesheets so the page never paints in the other theme first. -->
 <html lang="en" data-theme="dark">
 <head>
+    <script>
+        try {
+            if (localStorage.getItem('yt-mine.theme') === 'light') document.documentElement.dataset.theme = 'light';
+        } catch {}
+    </script>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>yt-mine</title>

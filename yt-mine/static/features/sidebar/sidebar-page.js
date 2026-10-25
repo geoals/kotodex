@@ -14,6 +14,8 @@ import { useKeys } from './keys.js';
 import { SidebarStats } from './stats.js';
 
 const STATS_KEY = 'yt-mine.sidebar.stats';
+// templates/spa.html reads the same key to stamp the theme before first paint.
+const THEME_KEY = 'yt-mine.theme';
 
 function storedStats() {
   try {
@@ -37,6 +39,17 @@ export function SidebarPage({ videoId }) {
     } catch {}
   }
 
+  const [theme, setTheme] = useState(document.documentElement.dataset.theme);
+
+  function toggleTheme() {
+    const next = theme === 'light' ? 'dark' : 'light';
+    document.documentElement.dataset.theme = next;
+    setTheme(next);
+    try {
+      localStorage.setItem(THEME_KEY, next);
+    } catch {}
+  }
+
   useYoutubePlayback();
   useEffect(() => send('ready'), []);
   useEffect(() => {
@@ -49,6 +62,8 @@ export function SidebarPage({ videoId }) {
   const active = useActiveSentence(sentences, job?.is_terminal);
   const { following, resume } = useFollow(active?.id);
   useKeys({ r: () => active && replay(active, videoId) });
+
+  const themeTitle = theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode';
 
   let head;
   if (error) head = html`<div class="status error"><span class="progress-text">${error}</span></div>`;
@@ -72,6 +87,7 @@ export function SidebarPage({ videoId }) {
         ${job?.sentences?.length > 0 && html`
           <div class="sidebar-bar">
             <${FilterBar} sentences=${job.sentences} filter=${filter} onFilter=${setFilter} />
+            <button class="theme-toggle" onClick=${toggleTheme} title=${themeTitle}>${theme === 'light' ? '☾' : '☀'}</button>
             <button class="stats-toggle${showStats ? ' on' : ''}" onClick=${toggleStats} title="Show or hide the coverage figures and the difficulty curve">Stats</button>
             <a href=${`/${videoId}/primer`} target="_blank" title="Words to learn before watching">Primer ↗</a>
           </div>
