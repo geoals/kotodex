@@ -130,3 +130,7 @@ button.timestamp.seek:hover {
 .sidebar-stats .suggest-known {
   margin-top: 0;
 }
+
+body:has(.yt-sidebar) .jp-popup {
+  --scale: 0.8;
+}

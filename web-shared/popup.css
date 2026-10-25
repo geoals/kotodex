@@ -25,26 +25,28 @@
 .jp-popup {
   --scale: 1;
   position: absolute;
-  /* Sized in its own text, bounded by the screen. `em` rather than `rem` or
-     px so the box tracks the host's font size — the overlay multiplies it by
-     `--scale` for phone size — and the viewport terms are only the "never off
-     the edge" bound, never the proportional size.
+  /* Sized in its own text, bounded by the screen. `em` rather than px so the
+     box tracks the host's font size, and every `rem` is multiplied by
+     `--scale` so a host can shrink the popup without shrinking its own page.
+     The viewport terms are only the "never off the edge" bound, never the
+     proportional size.
      The height cap is the room the anchor actually leaves: the host's `place`
      measures it and writes `--popup-max`. A host that sets none gets a box the
-     text decides. */
+     text decides. The minimum yields to that cap, or a short room would still
+     put the box over the line it came from. */
   width: min(calc(100vw - 1.5rem), 38em);
-  min-height: 8em;
+  min-height: min(8em, var(--popup-max, 8em));
   max-height: var(--popup-max, min(calc(100vh - 1.5rem), 30em));
   overflow-y: auto;
   box-sizing: border-box;
-  padding: 0.875rem 1.06rem 1rem;
+  padding: calc(0.875rem * var(--scale)) calc(1.06rem * var(--scale)) calc(1rem * var(--scale));
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-panel);
   /* Opaque: a definition read against moving artwork is unreadable. */
   background: var(--panel);
   color: var(--ink);
   box-shadow: var(--shadow);
-  font-size: 1.1rem;
+  font-size: calc(1.1rem * var(--scale));
   line-height: 1.55;
   text-shadow: none;
 }
@@ -55,20 +57,20 @@
 .jp-popup .head {
   display: flex;
   align-items: baseline;
-  gap: 0.625rem;
+  gap: calc(0.625rem * var(--scale));
   flex-wrap: wrap;
-  padding-bottom: 0.5rem;
-  margin-bottom: 0.5rem;
+  padding-bottom: calc(0.5rem * var(--scale));
+  margin-bottom: calc(0.5rem * var(--scale));
   border-bottom: 1px solid var(--border);
 }
 .jp-popup .term {
-  font-size: 1.5rem;
+  font-size: calc(1.5rem * var(--scale));
 }
 /* Downstep, as Yomitan writes it: [0] heiban, [1] atamadaka, [n] falling
    after the nth mora. */
 .jp-popup .pitch {
   color: var(--link);
-  font-size: 1rem;
+  font-size: calc(1rem * var(--scale));
 }
 .jp-popup .reading {
   color: var(--muted);
@@ -78,7 +80,7 @@
    part-of-speech badges below, so the popup has one badge vocabulary. */
 .jp-popup .rank {
   display: flex;
-  gap: 0.375rem;
+  gap: calc(0.375rem * var(--scale));
   margin-left: auto;
   white-space: nowrap;
 }
@@ -86,7 +88,7 @@
   display: inline-flex;
   border: 1px solid var(--chip);
   border-radius: 0.3em;
-  font-size: 0.9rem;
+  font-size: calc(0.9rem * var(--scale));
   line-height: 1.55;
 }
 .jp-popup .freq-name {
@@ -111,7 +113,7 @@
   background: var(--ok-wash);
   color: var(--ok);
   font: inherit;
-  font-size: 0.9rem;
+  font-size: calc(0.9rem * var(--scale));
   line-height: 1.55;
 }
 /* The affordance appears only once the badge has a card to open — it is a
@@ -133,7 +135,7 @@
    row of badges rather than a toolbar bolted to it. */
 .jp-popup .acts {
   display: flex;
-  gap: 0.375rem;
+  gap: calc(0.375rem * var(--scale));
 }
 .jp-popup .acts button {
   padding: 0 0.5em;
@@ -142,7 +144,7 @@
   background: var(--panel-raised);
   color: var(--ink-2);
   font: inherit;
-  font-size: 0.9rem;
+  font-size: calc(0.9rem * var(--scale));
   line-height: 1.55;
   cursor: pointer;
 }
@@ -201,8 +203,8 @@
 .jp-popup .expansions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.375rem;
-  margin-bottom: 0.5rem;
+  gap: calc(0.375rem * var(--scale));
+  margin-bottom: calc(0.5rem * var(--scale));
 }
 .jp-popup .expansions button {
   padding: 0 0.5em;
@@ -211,7 +213,7 @@
   background: var(--panel-raised);
   color: var(--ink-2);
   font: inherit;
-  font-size: 1rem;
+  font-size: calc(1rem * var(--scale));
   cursor: pointer;
 }
 .jp-popup .expansions button:hover {
@@ -219,24 +221,24 @@
 }
 .jp-popup .expansions .none {
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: calc(0.9rem * var(--scale));
 }
 
 /* Which dictionary is showing, and the way to the next one. */
 .jp-popup .dictbar {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
-  margin-top: 0.625rem;
+  gap: calc(0.625rem * var(--scale));
+  margin-top: calc(0.625rem * var(--scale));
 }
 .jp-popup .paging {
   display: flex;
-  gap: 0.25rem;
+  gap: calc(0.25rem * var(--scale));
   margin-left: auto;
 }
 .jp-popup .paging button {
-  width: 1.75rem;
-  padding: 0 0.25rem;
+  width: calc(1.75rem * var(--scale));
+  padding: 0 calc(0.25rem * var(--scale));
   border: 1px solid var(--border-strong);
   border-radius: 5px;
   background: var(--panel-raised);
@@ -256,19 +258,19 @@
 .jp-popup .dict {
   margin-top: 0;
   color: var(--ink-3);
-  font-size: 0.9rem;
+  font-size: calc(0.9rem * var(--scale));
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 .jp-popup .body {
-  font-size: 1.275rem;
+  font-size: calc(1.275rem * var(--scale));
 }
 .jp-popup .sense {
-  margin: 0.1875rem 0 0;
-  padding-left: 0.25rem;
+  margin: calc(0.1875rem * var(--scale)) 0 0;
+  padding-left: calc(0.25rem * var(--scale));
 }
 .jp-popup .sense li {
-  margin: 0.15rem 0;
+  margin: calc(0.15rem * var(--scale)) 0;
 }
 .jp-popup .none {
   color: var(--muted);
@@ -307,10 +309,10 @@
   display: block;
   max-width: 100%;
   height: auto;
-  margin: 0.35rem 0;
-  padding: 0.25rem;
+  margin: calc(0.35rem * var(--scale)) 0;
+  padding: calc(0.25rem * var(--scale));
   background: hsl(0 0% 100%);
-  border-radius: 0.25rem;
+  border-radius: calc(0.25rem * var(--scale));
   filter: none;
 }
 .jp-popup a {
@@ -325,7 +327,7 @@
   list-style-type: none;
 }
 .jp-popup ul {
-  padding-left: 2rem;
+  padding-left: calc(2rem * var(--scale));
 }
 .jp-popup ol ol li {
   list-style-type: none !important;
@@ -334,7 +336,7 @@
   list-style-type: disc !important;
 }
 .jp-popup ol ol > li > ul {
-  padding-left: 2rem !important;
+  padding-left: calc(2rem * var(--scale)) !important;
 }
 /* Jitendex's star icon, and its JMdict | Tatoeba links. */
 .jp-popup ol > li > i,
@@ -363,7 +365,7 @@
   list-style-type: none;
 }
 .jp-popup ul[data-content="sense-groups"] {
-  padding-left: 1rem;
+  padding-left: calc(1rem * var(--scale));
   list-style-type: none;
 }
 .jp-popup [data-content="extra-info"] {
@@ -372,10 +374,10 @@
 
 /* Example sentences as their own block, Japanese larger than the gloss. */
 .jp-popup [data-content="example-sentence"] {
-  margin: 0.4rem 0;
-  padding: 0.4rem 0.5rem;
+  margin: calc(0.4rem * var(--scale)) 0;
+  padding: calc(0.4rem * var(--scale)) calc(0.5rem * var(--scale));
   border-left: 2px solid var(--d-rule);
-  border-radius: 0.4rem;
+  border-radius: calc(0.4rem * var(--scale));
   background-color: var(--d-box);
 }
 .jp-popup [data-content="example-sentence-a"] {
