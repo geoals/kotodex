@@ -7,54 +7,29 @@
 }
 
 :root {
-  --bg: hsl(220, 8%, 7%);
-  --bg-surface: hsl(215, 8%, 11%);
-  --bg-hover: hsl(210, 7%, 15%);
-  --text: hsl(210, 8%, 92%);
-  --text-muted: hsl(210, 5%, 44%);
-  --accent: hsl(175, 50%, 48%);
-  --accent-hover: hsl(175, 55%, 58%);
-  --accent-dim: hsl(175, 30%, 16%);
-  --border: hsl(210, 6%, 24%);
-  --danger-bg: hsl(0, 30%, 12%);
-  --danger-border: hsl(0, 30%, 22%);
-  --danger-text: hsl(0, 35%, 60%);
-  --success-bg: hsl(170, 25%, 11%);
-  --success-border: hsl(170, 25%, 20%);
-  --success-text: hsl(170, 35%, 55%);
-  --mark-new: hsl(211 40% 22%);
-  --mark-seen: hsl(276 25% 20%);
-  --mark-unknown: hsl(28 45% 24%);
-  --now: hsl(175, 22%, 13%);
-  --float-shadow: 0 2px 10px hsl(0 0% 0% / 0.5);
-  --scrollbar: hsl(210, 5%, 22%);
-  --scrollbar-hover: hsl(210, 5%, 28%);
+  /* kotodex's palette, from /shared/theme.css. That file also defines
+     --accent and --border, which this page uses as they are. */
+  --bg: var(--page);
+  --bg-surface: var(--surface-1);
+  --bg-hover: var(--panel-hover);
+  --text: var(--text-primary);
+  --text-muted: var(--muted);
+  --accent-hover: color-mix(in srgb, var(--accent) 80%, var(--text-primary));
+  --accent-dim: var(--accent-wash);
+  --danger-bg: var(--panel-raised);
+  --danger-border: var(--danger);
+  --danger-text: var(--danger-ink);
+  --success-bg: var(--ok-wash);
+  --success-border: var(--ok-edge);
+  --success-text: var(--ok);
+  --mark-new: var(--vocab-new);
+  --mark-seen: var(--vocab-seen);
+  --mark-unknown: var(--vocab-unknown);
+  --now: var(--accent-wash);
+  --float-shadow: var(--shadow);
+  --scrollbar: var(--grid);
+  --scrollbar-hover: var(--baseline);
   --radius: 6px;
-}
-
-:root[data-theme="light"] {
-  --bg: hsl(60, 11%, 95%);
-  --bg-surface: hsl(213, 22%, 99%);
-  --bg-hover: hsl(52, 12%, 89%);
-  --text: hsl(0, 0%, 8%);
-  --text-muted: hsl(45, 3%, 40%);
-  --accent: hsl(175, 60%, 30%);
-  --accent-hover: hsl(175, 65%, 24%);
-  --accent-dim: hsl(175, 40%, 88%);
-  --border: hsl(52, 12%, 80%);
-  --danger-bg: hsl(0, 70%, 95%);
-  --danger-border: hsl(0, 50%, 80%);
-  --danger-text: hsl(0, 60%, 38%);
-  --success-bg: hsl(170, 40%, 93%);
-  --success-border: hsl(170, 30%, 75%);
-  --success-text: hsl(170, 60%, 25%);
-  --mark-new: hsl(211 88% 86%);
-  --mark-seen: hsl(276 62% 90%);
-  --mark-unknown: hsl(28 92% 85%);
-  --now: hsl(175, 45%, 88%);
-  --float-shadow: 0 2px 10px hsl(0 0% 0% / 0.18);
-  --scrollbar: hsl(52, 8%, 78%);
-  --scrollbar-hover: hsl(52, 8%, 68%);
 }
 
 body {
