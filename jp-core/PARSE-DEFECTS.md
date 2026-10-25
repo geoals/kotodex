@@ -1220,3 +1220,15 @@ One line each; the argument that settled it is in the code, next to the rule.
   この前 with nowhere else to go — but the surname belongs to no work here, and
   a per-work list is the wrong home for one of the commonest surnames in
   Japanese.
+- **いい気 built out of それでいい + 気もする** — 「それでいい気もする」. Sudachi
+  gets this right: Mode C returns それ + で + いい + 気 + も + する, and every
+  piece passes the gate. The word is ours — the join takes それで off the front,
+  then finds いい + 気 spells a listed headword and builds it, an *Expression
+  match* on surfaces. The boundary the join crosses is それでいい | 気もする, and
+  nothing in the run says so: both halves are real words, both are frequent, and
+  the joined term is a real entry too (6,940th in Jiten), so no gate, ladder or
+  frequency check has anything to object to. The signal that is there and unread
+  is that 気 is the head of 気もする — a noun the following も+する claims — so
+  joining it leftwards leaves the rest of the line without a predicate. That is
+  a rule about what follows the run, the same shape as the いたって case, and the
+  same reason neither is reachable from the finished tokens.
