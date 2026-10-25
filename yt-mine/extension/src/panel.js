@@ -57,13 +57,19 @@ export function createPanel(settings, { onLoad }) {
   return {
     frame,
     show(videoId, mountPoint) {
-      if (root.parentNode !== mountPoint) mountPoint.prepend(root);
+      if (mountPoint && root.parentNode !== mountPoint) mountPoint.prepend(root);
       root.hidden = false;
       const url = `${settings.server}/${encodeURIComponent(videoId)}/sidebar`;
       if (url !== src) load(url);
     },
     hide() {
       root.hidden = true;
+    },
+    docked(on) {
+      root.classList.toggle('docked', on);
+    },
+    get visible() {
+      return !root.hidden;
     },
     ready() {
       clearTimeout(readyTimer);

@@ -76,3 +76,32 @@
 .yt-mine-notice:not([hidden]) + .yt-mine-frame {
   display: none;
 }
+
+.yt-mine-panel.docked {
+  position: static;
+  height: 100%;
+  margin-bottom: 0;
+}
+
+.yt-mine-docked #fixed-secondary #panels {
+  display: none !important;
+}
+
+.yt-mine-rail-glyph {
+  font-size: 18px;
+  line-height: 24px;
+}
+
+/* The rail button opens and closes the docked panel, so its own bar and
+   collapsed state do not apply. */
+.yt-mine-panel.docked .yt-mine-bar {
+  display: none;
+}
+
+.yt-mine-panel.docked.collapsed .yt-mine-frame {
+  display: block;
+}
+
+.yt-mine-panel.docked.collapsed .yt-mine-notice:not([hidden]) {
+  display: block;
+}
