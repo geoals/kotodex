@@ -41,10 +41,15 @@ form, understandable without the surrounding scene.\n\n\
 sentence. Rank those lower: a sentence the reader cannot yet read the rest of \
 teaches none of its words well, and the count rising is the clearest sign of \
 it.\n\n\
-Leave out only what is not a word. The tokenizer cuts things that are not \
-vocabulary: a piece sliced out of a longer run of kana, or a noise written \
-down — a moan, a sound effect. The test is whether it would look wrong as the front of a \
-card on its own.\n\n\
+Leave out what the tokenizer got wrong. Two shapes. A piece that is not \
+vocabulary at all: sliced out of a longer run of kana, or a noise written \
+down — a moan, a sound effect. And a real word cut across a boundary: its \
+characters are in the line, but they belong to two different parts of it, so \
+the line never used that word. それでいい気もする holds それでいい and \
+気もする, not いい気.\n\n\
+Read the candidate back into its line before you place it. A word that is \
+fine on its own can still be the second kind of mistake, and only the line \
+shows it.\n\n\
 **Omit those entirely — leave them out of the list. Do not rank them at the \
 bottom.** If you find yourself writing that something is not a word, not \
 vocabulary, or a fragment, that is the signal to drop it rather than place it \
